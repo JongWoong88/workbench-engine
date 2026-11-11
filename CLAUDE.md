@@ -4,13 +4,14 @@ workbench 엔진 저장소다. 작업 보드 이슈와 기록 문서를 git 문�
 
 - 형식 규칙의 정본: [plugin/references/workbench-format.md](plugin/references/workbench-format.md)
 - 스킬이 따르는 이용 규칙: [plugin/references/workbench-rules.md](plugin/references/workbench-rules.md)
-- 사용자 안내: [README.md](README.md), [plugin/README.md](plugin/README.md)
+- 사용자 안내: [README.md](README.md)(왜 필요한가·워크플로·빠른 시작), [plugin/README.md](plugin/README.md)(설치·구성·설정·문제 해결 — 게시 패키지의 README). 같은 내용을 두 곳에 쓰지 않는다
+- CLAUDE.md는 엔진 개발용이다. 게시 패키지에 넣지 않는다
 
 ## 구성
 
 | 경로 | 내용 | 설치물에 |
 |---|---|---|
-| `plugin/` | 플러그인 원본. `skills/`, `agents/`, `hooks/`, `references/`, `board.yml`, `templates/`(문서 저장소 hook·CI) | 들어간다 |
+| `plugin/` | 플러그인 원본. `skills/`, `agents/`, `hooks/`, `references/`, `board.yml`, `templates/`(문서 저장소 hook·CI, 설정 예시 `samples/`) | 들어간다 |
 | `plugin/cli/` | `wb` 명령 소스. 게시할 때 `bin/wb.mjs` 한 파일로 묶는다 | 묶음으로 |
 | `plugin/bin/` | `wb` 진입점(`wb`, `wb.cmd`, `wb.mjs`) | 들어간다 |
 | `site/` | 보드 화면 원본. `npm run board:build`가 `plugin/board-ui/`로 묶는다 | 묶음으로 |
@@ -31,7 +32,8 @@ node plugin/bin/wb.mjs --help
 ```
 
 - 문서 저장소가 있어야 하는 명령은 `WORKBENCH_ROOT=<문서 저장소>`나 `wb config set data-root`로 위치를 준다. 시험은 임시 작업 공간을 만들어 쓰고 실제 홈 설정을 건드리지 않는다(`WORKBENCH_CONFIG_DIR`).
-- `wb board`는 사람이 터미널에서 띄운다. 터미널이 아닌 곳에서 시험할 때만 `WORKBENCH_BOARD_ALLOW_NONTTY=1`을 준다.
+- `wb board`는 터미널이면 그 자리에서 돌고, 터미널이 아니면(에이전트) 백그라운드로 띄우고 바로 돌아온다(`--stop`으로 끈다). 시험에서 터미널 없이 그 자리에서 돌려야 할 때만 `WORKBENCH_BOARD_ALLOW_NONTTY=1`을 준다.
+- `wb`는 에이전트용 명령이다. 사용자 문서는 구성·보드를 포함한 모든 일을 에이전트에게 시키는 것을 기본으로 안내하고, 터미널 사용은 선택(`npm i -g`)으로 안내한다.
 
 ## 설치물 규칙
 

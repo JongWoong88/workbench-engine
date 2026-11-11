@@ -50,7 +50,7 @@ test('패키지 구성: bin은 wb 하나, 런타임 의존 없음, 플러그인�
   assert.equal(manifest.dependencies, undefined);
   assert.equal(JSON.parse(fs.readFileSync(path.join(pkg, '.claude-plugin', 'plugin.json'), 'utf8')).version, manifest.version);
   const files = listing(pkg);
-  for (const f of ['bin/wb.mjs', 'bin/wb', 'bin/wb.cmd', 'board.yml', 'board-ui/index.html', 'hooks/hooks.json', 'references/workbench-format.md', 'skills/plan/SKILL.md', 'templates/githooks/pre-commit', 'templates/ci/gitlab-ci.yml', 'templates/ci/github-lint.yml', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) assert.ok(files.includes(f), f);
+  for (const f of ['bin/wb.mjs', 'bin/wb', 'bin/wb.cmd', 'board.yml', 'board-ui/index.html', 'hooks/hooks.json', 'references/workbench-format.md', 'skills/plan/SKILL.md', 'templates/githooks/pre-commit', 'templates/ci/gitlab-ci.yml', 'templates/ci/github-lint.yml', 'templates/samples/workbench.config.json', 'templates/samples/projects.tsv', 'templates/samples/user-config.json', 'skills/setup/SKILL.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) assert.ok(files.includes(f), f);
   assert.ok(!files.some((f) => f.startsWith('cli/') || f.includes('node_modules')), 'cli/·node_modules가 패키지에 있다');
   assert.equal(wb(['--version']).out.trim(), manifest.version);
 });

@@ -164,6 +164,8 @@ updated: 2026-09-28
 
 ## 설정
 
+예시 파일은 플러그인의 `templates/samples/`에 있다: `workbench.config.json`(공유 설정), `projects.tsv`(대응표), `user-config.json`(PC별 설정).
+
 ### 공유 설정 `workbench.config.json` (문서 저장소)
 
 팀이 함께 쓰는 값이다. 커밋한다. 비밀을 넣지 않는다. 키는 모두 생략할 수 있고, 파일이 없어도 된다.
@@ -183,7 +185,7 @@ updated: 2026-09-28
 
 ### PC별 설정 `~/.workbench/config.json`
 
-`wb config`로 읽고 쓴다.
+`wb config`로 읽고 쓴다. 손으로 고쳐도 된다 — JSON 키는 `dataRoot`, `workspaceRoot`, `repoPaths`(논리 경로 → 폴더), `remote`다.
 
 | 명령 | 뜻 |
 |---|---|
@@ -211,7 +213,7 @@ updated: 2026-09-28
 | `wb absorb-candidates [--task \| --project] [--since]` | 종료 이슈의 기록과 대상 저장소의 문서 루트 목록 |
 | `wb decision-stats [--task \| --project] [--by harness] [--check]` | 이슈 폴더 `decisions.md`의 담당자 평가 지표와 형식 검사 |
 | `wb config …` | PC별 설정 |
-| `wb board [--port] [--open] [--worktree]` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 사람이 터미널에서 띄운다 |
+| `wb board [--port] [--open] [--worktree] [--no-fetch] [--background]`, `wb board --stop` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 터미널에서는 그 자리에서 돌고(Ctrl+C로 끝), 터미널이 아니면(에이전트) 백그라운드로 띄우고 바로 돌아온다. 이미 떠 있으면 그 주소를 알린다. `--stop`이 끈다. 떠 있는 보드는 `~/.workbench/board.json`에 적는다 |
 | `wb init <폴더> --host gitlab\|github [--web] [--repo] [--branch] [--set-data-root]` | 새 문서 저장소 템플릿(보드·기록 폴더, 대응표 머리, 공유 설정, hook, CI 파일) |
 | `wb --version` | 설치 버전. 결정 기록의 하네스 값으로 쓴다 |
 

@@ -60,3 +60,16 @@ test('wb init: 호스트 없이, 잘못된 값으로는 만들지 않는다', ()
   assert.equal(wb(['init', path.join(tmp, 'x'), '--host', 'github', '--web', 'ftp://x']).code, 2);
   assert.ok(!fs.existsSync(path.join(tmp, 'x')));
 });
+
+test('예시 파일: 공유 설정·대응표 예시를 새 문서 저장소에 넣어도 lint --all을 통과하고, PC별 설정 예시는 wb config가 아는 키만 쓴다', () => {
+  const SAMPLES = path.join(path.dirname(WB), '..', 'templates', 'samples');
+  const root = path.join(tmp, 'docs-sample');
+  assert.equal(wb(['init', root, '--host', 'github', '--json'], { WORKBENCH_ROOT: undefined }).code, 0);
+  for (const f of ['workbench.config.json', 'projects.tsv']) fs.copyFileSync(path.join(SAMPLES, f), path.join(root, f));
+  const lint = wb(['lint', '--all', '--json'], { WORKBENCH_ROOT: root });
+  assert.equal(lint.code, 0, lint.out + lint.err);
+  assert.equal(lint.json.errors, 0, lint.out);
+  assert.equal(lint.json.warnings ?? 0, 0, lint.out);
+  const user = JSON.parse(fs.readFileSync(path.join(SAMPLES, 'user-config.json'), 'utf8'));
+  assert.deepEqual(Object.keys(user).sort(), ['dataRoot', 'remote', 'repoPaths', 'workspaceRoot']);
+});

@@ -170,10 +170,49 @@ test('보드 API: wb sync 뒤에는 fetch 없이도 바로 새 끝 커밋을 보
 
 const boardEnv = (extra = {}) => ({ ...process.env, WORKBENCH_ROOT: fx.wb, WORKSPACE_ROOT: fx.ws, WORKBENCH_CONFIG_DIR: path.join(fx.ws, '.wb-config'), WORKBENCH_BOARD_FILE: path.join(fx.wb, 'board', 'board.yml'), ...extra });
 
-test('wb board: 터미널이 아니면 띄우지 않고 방법을 안내한다', () => {
-  const r = spawnSync(process.execPath, [path.join(ROOT, 'plugin', 'bin', 'wb.mjs'), 'board', '--json'], { encoding: 'utf8', env: boardEnv() });
-  assert.equal(r.status, 3, r.stdout + r.stderr);
-  assert.equal(JSON.parse(r.stdout).code, 'BOARD-NOT-INTERACTIVE');
+const wbBoard = (args, env) => {
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'plugin', 'bin', 'wb.mjs'), 'board', ...args, '--json'], { encoding: 'utf8', env, timeout: 30000 });
+  return { status: r.status, json: JSON.parse(r.stdout), raw: r.stdout + r.stderr };
+};
+const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
+
+test('wb board: 터미널이 아니면 백그라운드로 띄우고 바로 돌아오며, 다시 부르면 떠 있는 보드를 알리고, --stop으로 끈다', async () => {
+  const env = boardEnv({ WORKBENCH_BOARD_UI: UI() });
+  const stateFile = path.join(fx.ws, '.wb-config', 'board.json');
+  const first = wbBoard(['--port', '0', '--no-fetch'], env);
+  assert.equal(first.status, 0, first.raw);
+  try {
+    assert.equal(first.json.background, true);
+    assert.equal(first.json.reused, false);
+    assert.match(first.json.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
+    assert.equal((await get(first.json.port, '/api/head')).status, 200); // 부른 프로세스가 끝난 뒤에도 돈다
+    assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).pid, first.json.pid);
+
+    const again = wbBoard(['--no-fetch'], env);
+    assert.equal(again.status, 0, again.raw);
+    assert.equal(again.json.reused, true);
+    assert.equal(again.json.pid, first.json.pid);
+
+    const stopped = wbBoard(['--stop'], env);
+    assert.equal(stopped.json.stopped, true, stopped.raw);
+    assert.equal(alive(first.json.pid), false);
+    assert.equal(fs.existsSync(stateFile), false);
+    assert.equal(wbBoard(['--stop'], env).json.stopped, false); // 끈 뒤에는 할 일이 없다
+  } finally {
+    if (alive(first.json.pid)) process.kill(first.json.pid);
+  }
+});
+
+test('wb board: 백그라운드 프로세스가 뜨지 못하면 그 거부를 그대로 알린다', async () => {
+  const busy = http.createServer().listen(0, '127.0.0.1');
+  await new Promise((r) => busy.once('listening', r));
+  try {
+    const r = wbBoard(['--port', String(busy.address().port), '--no-fetch'], boardEnv({ WORKBENCH_BOARD_UI: UI() }));
+    assert.equal(r.status, 3, r.raw);
+    assert.equal(r.json.code, 'BOARD-PORT-BUSY');
+  } finally {
+    busy.close();
+  }
 });
 
 test('wb board: 127.0.0.1에 띄우고, Host를 검사하고, 잠금 중에는 fetch를 건너뛴다', async () => {

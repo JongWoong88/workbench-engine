@@ -1,0 +1,8 @@
+{
+  "dataRoot": "/home/me/workspace/docs",
+  "workspaceRoot": "/home/me/workspace",
+  "repoPaths": {
+    "group/web-admin": "/home/me/other/web-admin"
+  },
+  "remote": "origin"
+}

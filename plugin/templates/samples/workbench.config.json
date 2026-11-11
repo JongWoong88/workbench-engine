@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "host": {
+    "type": "gitlab",
+    "web": "https://gitlab.example.com"
+  },
+  "repo": "group/docs",
+  "branch": "main",
+  "docRoots": ["docs", "src/main/resources/docs"],
+  "board": {
+    "fetchIntervalSec": 30
+  }
+}

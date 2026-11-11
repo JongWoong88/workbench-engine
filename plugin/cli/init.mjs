@@ -13,7 +13,9 @@ const USAGE = `사용법: wb init <폴더> --host gitlab|github [--web <호스�
   --web           호스트 웹 주소. gitlab이면 필요하다(예: https://gitlab.example.com). github 기본은 https://github.com
   --repo          호스트에서 이 문서 저장소의 경로(예: group/docs). 보드의 파일 링크에 쓴다
   --branch        기본 브랜치 (기본 main)
-  --set-data-root 이 PC의 문서 저장소 위치로 설정한다(wb config set data-root)`;
+  --set-data-root 이 PC의 문서 저장소 위치로 설정한다(wb config set data-root)
+  에이전트: 위 값과 projects.tsv에 넣을 project·키를 추측하지 않는다. 사용자에게 묻고 확인받은 뒤 실행한다(절차: workbench:setup 스킬)
+  예시 파일: 플러그인의 templates/samples/ (workbench.config.json, projects.tsv, user-config.json)`;
 
 const TEMPLATES = path.join(ENGINE, 'templates');
 
@@ -32,14 +34,23 @@ const GITIGNORE = 'Thumbs.db\nDesktop.ini\n.DS_Store\n~$*\n';
 const PROJECTS = '# project\tkey\trepos\tremote\n# 한 줄에 project 하나. 열은 탭으로 나눈다. 예:\n# app\tAPP\tgroup/app\tgroup/app\n';
 const README = `# 작업 문서 저장소
 
-이슈(\`board/tasks/\`), 기록(\`records/\`), 대응표(\`projects.tsv\`), 공유 설정(\`workbench.config.json\`)을 둔다. Claude Code 플러그인 \`workbench\`의 스킬과 \`wb\` 명령으로 다룬다.
+이슈(\`board/tasks/\`), 기록(\`records/\`), 대응표(\`projects.tsv\`), 공유 설정(\`workbench.config.json\`)을 둔다. Claude Code 플러그인 \`workbench\`의 스킬과 \`wb\` 명령으로 다룬다. 파일 형식은 플러그인의 \`references/workbench-format.md\`가 정한다.
 
-## 처음 할 일
+## 팀원이 처음 할 일
 
-1. \`projects.tsv\`에 project를 추가한다: project 이름, task_id 키, 서비스 저장소의 논리 경로(워크스페이스 루트 기준), 호스트 저장소 경로. 열은 탭으로 나눈다
-2. 커밋하고 기본 브랜치에 push한다
-3. 각 PC: 플러그인을 설치하고 \`wb config set data-root <이 저장소 clone 경로>\`, 이 저장소에서 \`git config core.hooksPath .githooks\`
-4. 보드: \`wb board --open\`
+1. Claude Code에 플러그인을 설치한다(사용자 범위)
+   \`\`\`bash
+   claude plugin marketplace add JongWoong88/workbench-engine
+   claude plugin install workbench@fiveeyes --scope user
+   \`\`\`
+2. 새 Claude Code 세션에서 "workbench 설정해 줘. 기존 문서 저장소에 합류할게"라고 말하고 이 저장소의 clone 주소를 알려 준다. 에이전트가 clone, 문서 저장소 위치 설정, 커밋 전 검사 연결을 한다
+3. 확인: 에이전트에게 "보드 띄워 줘"
+
+## 직접 다룰 때
+
+- 이슈·기록은 스킬로 만들고 고친다. 손으로 고쳤으면 커밋 전에 \`wb lint --staged\`가 검사한다(\`.githooks/pre-commit\`, 이 clone에서 \`git config core.hooksPath .githooks\`를 한 번 실행해야 켜진다)
+- 새 서비스 저장소를 다루게 되면 \`projects.tsv\`에 한 줄을 더한다: project, task_id 키, 저장소 논리 경로(워크스페이스 루트 기준), 호스트 저장소 경로. 열은 탭으로 나눈다. 키는 팀과 정한다
+- push하면 CI가 \`lint --all\`로 다시 검사한다
 `;
 
 function writeIfAbsent(file, text, mode) {
@@ -94,7 +105,14 @@ run(async () => {
   }
   if (values.host === 'gitlab' && !values.web) notes.push('--web이 없어 보드가 깃랩 링크를 만들지 않는다. workbench.config.json의 host.web에 깃랩 주소를 적는다');
 
-  const next = ['projects.tsv에 project를 추가한다(키는 임의로 정하지 말고 팀과 정한다)', '커밋하고 기본 브랜치에 push한다', ...(values['set-data-root'] ? [] : [`wb config set data-root ${root}`]), 'wb board --open'];
+  const next = [
+    'projects.tsv에 project를 추가한다(키는 임의로 정하지 말고 사용자·팀과 정한다. 예시: 플러그인의 templates/samples/projects.tsv)',
+    'wb lint --all로 확인한다',
+    `호스트에 빈 저장소를 만들고 연결한다: git -C ${root} remote add origin <주소>`,
+    `첫 커밋을 하고 push한다: git -C ${root} add -A, git -C ${root} commit -m "chore: workbench 문서 저장소 초기화", git -C ${root} push -u origin ${branch}`,
+    ...(values['set-data-root'] ? [] : [`wb config set data-root ${root}`]),
+    'wb board --open (push한 뒤에 원격 기본 브랜치를 보여 준다)',
+  ];
   return {
     data: { root, host: values.host, branch, made, notes, next },
     text: [`만듦: ${root}`, ...made.map((f) => `  ${f}`), ...notes.map((n) => `  참고: ${n}`), ...next.map((n) => `  다음: ${n}`)].join('\n'),

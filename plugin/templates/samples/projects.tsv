@@ -1,0 +1,4 @@
+# project	key	repos	remote
+app	APP	group/app	group/app
+web	WEB	group/web-front,group/web-admin	group/web-front,group/web-admin
+common	CMN	-	-

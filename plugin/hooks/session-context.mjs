@@ -25,10 +25,10 @@ try {
     const keys = taskIdKeys(path.join(data, 'projects.tsv'));
     if (keys.length) lines.push(`- task_id 형식은 \`{접두사}-{번호}\`이고 접두사는 ${keys.map((k) => `\`${k}\``).join(', ')}다. 사용자가 이 형식의 이슈를 언급하면 workbench 보드 이슈다.`);
   } else {
-    lines.push('- 이 PC의 workbench 문서 저장소 위치가 아직 정해지지 않았다. workbench 이슈·기록 작업을 시작하기 전에 사용자에게 문서 저장소 clone 경로를 물어 `wb config set data-root <경로>`를 실행한다.');
+    lines.push('- 이 PC의 workbench 문서 저장소 위치가 아직 정해지지 않았다. 사용자가 workbench를 쓰려 하면 먼저 `workbench:setup` 스킬로 구성한다(기존 문서 저장소에 합류하거나 새로 만든다). clone 경로만 알면 `wb config set data-root <경로>`로 위치만 정해도 된다.');
   }
   lines.push(
-    '- `wb` 명령이 PATH에 있다. 이슈 조회·발급·이동, 기록 생성·링크, 검사, 커밋을 이 명령으로 한다. 사용법은 `wb --help`, 명령별로 `wb <명령> --help`.',
+    '- `wb` 명령이 PATH에 있다(이 세션의 셸에만 있고, 사용자의 터미널에는 없을 수 있다). 이슈 조회·발급·이동, 기록 생성·링크, 검사, 커밋, 보드를 이 명령으로 한다. 사용자가 보드를 보려 하면 `wb board --open`(백그라운드로 뜨고 바로 돌아온다), 끄려면 `wb board --stop`. 사용법은 `wb --help`, 명령별로 `wb <명령> --help`.',
     `- 보드 이슈를 읽거나 그 이슈로 작업하거나 \`wb\`를 실행하기 전에 읽는 규칙 문서: ${toPosix(rules)}`,
     `- 보드·기록 파일 형식(필드, 상태 규칙, 설정, lint)의 정본: ${toPosix(formatSpec)}`,
     '- 이슈 발급·수정·보관과 기록 작성 절차는 `workbench:*` 스킬에 있다.',
