@@ -53,7 +53,7 @@ function openBrowser(url) {
   if (process.env.WORKBENCH_BOARD_NO_BROWSER) return; // 시험
   const [cmd, a] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]]
     : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
-  try { spawn(cmd, a, { detached: true, stdio: 'ignore', windowsVerbatimArguments: process.platform === 'win32' }).unref(); } catch { /* 주소를 직접 연다 */ }
+  try { spawn(cmd, a, { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: process.platform === 'win32' }).unref(); } catch { /* 주소를 직접 연다 */ }
 }
 
 const readState = () => { try { return JSON.parse(fs.readFileSync(STATE, 'utf8')); } catch { return null; } };

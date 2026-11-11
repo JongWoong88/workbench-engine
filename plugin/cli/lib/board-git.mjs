@@ -35,7 +35,7 @@ export function checkRef(ref) {
 export function createGitReader({ root, ref, worktree = false }) {
   const run = (args, { input, buffer = false, timeout = 60_000 } = {}) => {
     const r = spawnSync('git', args, {
-      cwd: root, input, timeout, maxBuffer: 512 * 1024 * 1024, ...(buffer ? {} : { encoding: 'utf8' }),
+      cwd: root, input, timeout, windowsHide: true, maxBuffer: 512 * 1024 * 1024, ...(buffer ? {} : { encoding: 'utf8' }),
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' },
     });
     return { ok: r.status === 0, stdout: r.stdout ?? (buffer ? Buffer.alloc(0) : ''), stderr: String(r.stderr ?? '') };

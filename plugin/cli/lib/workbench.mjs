@@ -116,7 +116,7 @@ export function today() {
 export function git(args, cwd = WB, opts = {}) {
   // 대화형 로그인 창·프롬프트를 띄우지 않고 실패로 끝낸다 (에이전트가 멈추지 않게). 호출자가 env를 주면 그쪽이 우선한다
   const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never' };
-  const r = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, env, ...opts });
+  const r = spawnSync('git', args, { cwd, encoding: 'utf8', windowsHide: true, maxBuffer: 256 * 1024 * 1024, env, ...opts });
   if (r.error && r.error.code === 'ENOENT') {
     throw new Rejection({ code: 'ENV-GIT', message: 'git을 찾을 수 없다', fix: 'git을 설치하고 PATH에 넣는다', owner: 'user', exit: EXIT.ENV });
   }
