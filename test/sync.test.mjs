@@ -91,6 +91,23 @@ test('sync: 미리 git rm으로 스테이징한 삭제가 대상에 섞여도 �
   assert.equal(git(fx.wb, 'status', '--porcelain'), '');
 });
 
+test('sync: 대상으로 폴더를 주면 그 아래 미리 git rm한 삭제를 함께 커밋하고, 폴더 밖 스테이징은 여전히 거부한다', () => {
+  for (const n of ['a', 'b']) fx.write(`records/alpha/old/${n}.md`, `---\ntitle: ${n}\nlifecycle: record\nrepos: []\nbase: unknown\nupdated: 2026-10-02\n---\n\n# ${n}\n`);
+  git(fx.wb, '-c', 'user.name=t', '-c', 'user.email=t@t', 'add', 'records/alpha/old');
+  git(fx.wb, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'old');
+  git(fx.wb, 'push', '-q', 'origin', 'main');
+  git(fx.wb, 'rm', '-q', '-r', 'records/alpha/old');
+  // 폴더 이름의 접두만 같은 다른 경로는 대상이 아니다
+  fx.write('records/alpha/older.md', '# x\n');
+  git(fx.wb, 'add', 'records/alpha/older.md');
+  assertRejection(sync(['commit', '--files', 'records/alpha/old/', '--message', 'm']), 'SYNC-STAGED-OTHER');
+  git(fx.wb, 'restore', '--staged', 'records/alpha/older.md');
+  fs.rmSync(path.join(fx.wb, 'records', 'alpha', 'older.md'));
+  const r = sync(['commit', '--files', 'records/alpha/old', '--message', 'chore: 폴더 삭제']);
+  assert.equal(r.code, 0, r.err || r.out);
+  assert.deepEqual(git(rm.remote, 'show', '--name-status', '--format=', 'main').split('\n').sort(), ['D\trecords/alpha/old/a.md', 'D\trecords/alpha/old/b.md']);
+});
+
 test('sync: 작업 트리·인덱스·HEAD 어디에도 없는 대상 경로는 커밋 전에 거부하고, 다른 대상의 스테이징도 건드리지 않는다', () => {
   fx.write('board/tasks/KEYA-1.md', `${fx.read('board/tasks/KEYA-1.md')}본문 추가\n`);
   const before = git(rm.remote, 'rev-parse', 'main');

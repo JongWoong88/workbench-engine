@@ -21,6 +21,7 @@ const COMMANDS = {
   config: () => import('../cli/config.mjs'),
   'decision-stats': () => import('../cli/decision-stats.mjs'),
   board: () => import('../cli/board.mjs'),
+  init: () => import('../cli/init.mjs'),
 };
 const NAMES = Object.keys(COMMANDS);
 

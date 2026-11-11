@@ -46,6 +46,29 @@ wb config set data-root <문서 저장소 clone 경로>
 2. 새 Claude Code 세션에서 `/workbench:`를 입력하면 스킬 목록이 보인다
 3. 에이전트에게 "wb --help 실행해 줘" — `문서:` 줄에 문서 저장소 경로가, `엔진:` 줄에 설치 위치와 버전이 나온다
 
+## 새 문서 저장소 만들기
+
+팀에 문서 저장소가 아직 없으면 한 사람이 만든다.
+
+```bash
+wb init <폴더> --host gitlab --web https://gitlab.example.com --repo group/docs --set-data-root
+# GitHub면: wb init <폴더> --host github --repo owner/docs --set-data-root
+```
+
+보드·기록 폴더, `projects.tsv` 머리, `workbench.config.json`, `.githooks/pre-commit`, 호스트에 맞는 CI 파일을 만들고 `git init`과 `core.hooksPath`까지 한다. 그다음 `projects.tsv`에 project를 추가하고 커밋해 호스트의 빈 저장소로 push한다. 다른 사람은 그 저장소를 clone하고 `wb config set data-root`만 하면 된다.
+
+- 호스트에는 기본 브랜치에 직접 push할 수 있게 둔다(`wb sync`가 기본 브랜치에 push한다)
+- 문서 저장소는 비공개를 권한다. 이슈·기록을 읽을 수 있는 사람이 곧 보드를 볼 수 있는 사람이다
+
+## 사내 npm 미러
+
+외부 npm 레지스트리에 닿지 못하는 환경은 미러를 쓴다. 미러가 이 패키지(`@fiveeyes/workbench-engine`)를 프록시해야 한다.
+
+| 곳 | 설정 |
+|---|---|
+| PC(플러그인 설치·갱신) | Claude Code는 사용자의 npm 설정으로 패키지를 받는다: `npm config set @fiveeyes:registry <미러 주소>` |
+| 문서 저장소 CI | CI 변수 `NPM_CONFIG_REGISTRY=<미러 주소>`를 두거나, CI 파일의 `npx` 앞에 같은 환경변수를 둔다 |
+
 ## PC별 설정
 
 | 상황 | 명령 |

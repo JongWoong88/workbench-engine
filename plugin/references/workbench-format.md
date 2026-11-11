@@ -211,6 +211,8 @@ updated: 2026-09-28
 | `wb absorb-candidates [--task \| --project] [--since]` | 종료 이슈의 기록과 대상 저장소의 문서 루트 목록 |
 | `wb decision-stats [--task \| --project] [--by harness] [--check]` | 이슈 폴더 `decisions.md`의 담당자 평가 지표와 형식 검사 |
 | `wb config …` | PC별 설정 |
+| `wb board [--port] [--open] [--worktree]` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 사람이 터미널에서 띄운다 |
+| `wb init <폴더> --host gitlab\|github [--web] [--repo] [--branch] [--set-data-root]` | 새 문서 저장소 템플릿(보드·기록 폴더, 대응표 머리, 공유 설정, hook, CI 파일) |
 | `wb --version` | 설치 버전. 결정 기록의 하네스 값으로 쓴다 |
 
 문서 저장소의 pre-commit hook(`.githooks/pre-commit`, `git config core.hooksPath .githooks`)은 `wb lint --staged`를 돌려 오류가 있으면 커밋을 거부한다. 그 터미널에 `wb`가 없으면 경고만 하고 통과시킨다. push 뒤 CI lint가 검사한다.

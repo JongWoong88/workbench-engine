@@ -184,7 +184,8 @@ export function commit({ files, message }) {
   requireMain();
 
   const staged = g(['diff', '--cached', '--name-only', '-z']).stdout.split('\0').filter(Boolean);
-  const other = staged.filter((f) => !targets.includes(f));
+  // 대상이 폴더면 그 아래 파일(미리 git rm한 삭제 포함)도 대상이다
+  const other = staged.filter((f) => !targets.some((t) => f === t || f.startsWith(`${t.replace(/\/+$/, '')}/`)));
   if (other.length) {
     throw new Rejection({
       code: 'SYNC-STAGED-OTHER', message: `대상 밖 파일이 스테이징돼 있다: ${other.join(', ')}`,

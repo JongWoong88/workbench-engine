@@ -21,7 +21,7 @@ wb config set data-root <문서 저장소 clone 경로>
 
 ## 문서 저장소
 
-문서 저장소는 다음을 가진 git 저장소다.
+새로 만들 때는 `wb init <폴더> --host gitlab|github [--web <호스트 주소>] [--repo <호스트의 저장소 경로>] --set-data-root`가 아래 파일을 모두 만든다. 문서 저장소는 다음을 가진 git 저장소다.
 
 | 파일 | 내용 |
 |---|---|
