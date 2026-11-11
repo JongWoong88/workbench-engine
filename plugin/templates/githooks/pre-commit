@@ -1,0 +1,17 @@
+#!/bin/sh
+# workbench 문서 저장소 pre-commit. 커밋에 들어가는 파일을 workbench 규칙으로 검사하고, 오류가 있으면 커밋을 거부한다.
+# 설치: 문서 저장소에서 `git config core.hooksPath .githooks` (이 파일을 .githooks/pre-commit에 둔다)
+# wb(workbench 플러그인의 명령)가 이 터미널에 없으면 경고만 하고 통과시킨다. push 뒤 CI lint가 검사한다(D-14)
+if ! command -v wb >/dev/null 2>&1; then
+  echo "workbench: wb를 찾지 못해 커밋 전 검사를 건너뛴다. push 뒤 CI lint가 검사한다 (터미널에서도 쓰려면 같은 패키지를 npm i -g로 설치한다)" >&2
+  exit 0
+fi
+wb lint --staged
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo "" >&2
+  echo "커밋이 거부되었다 (pre-commit: wb lint --staged)." >&2
+  echo "  수정: 위 오류를 고치고 \`git add\` 한 뒤 다시 커밋한다. \"누가\"가 사용자인 항목은 사용자에게 보고한다" >&2
+  echo "  우회: \`git commit --no-verify\`는 사용자가 명시적으로 허락한 경우에만 쓴다" >&2
+  exit "$status"
+fi

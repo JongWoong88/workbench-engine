@@ -1,0 +1,3 @@
+#!/bin/sh
+# workbench 명령 진입점. 플러그인 bin/이 PATH에 있어 `wb <명령> [인자…]`로 부른다. 처리는 wb.mjs가 한다.
+exec node "$(dirname -- "$0")/wb.mjs" "$@"

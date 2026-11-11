@@ -1,0 +1,30 @@
+{
+  "name": "workbench-engine-dev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "workbench 엔진 개발 저장소. 게시 패키지는 npm run package:build가 dist/package/에 만든다",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "node plugin/bin/wb.mjs lint",
+    "test": "node --test \"test/*.test.mjs\"",
+    "board:build": "node bin/build-site.mjs",
+    "board:dev": "node bin/build-site.mjs --dev",
+    "package:build": "node bin/build-package.mjs"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@hackmd/markdown-it-task-lists": "2.1.4",
+    "dompurify": "3.4.17",
+    "esbuild": "0.28.2",
+    "github-slugger": "2.0.0",
+    "highlight.js": "11.12.0",
+    "jsdom": "30.1.3",
+    "markdown-it": "15.0.3",
+    "markdown-it-anchor": "10.0.0",
+    "mermaid": "12.2.0"
+  }
+}

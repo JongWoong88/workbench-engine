@@ -1,0 +1,12 @@
+{
+  "name": "fiveeyes",
+  "owner": { "name": "fiveeyes" },
+  "description": "workbench 플러그인 마켓플레이스. 플러그인은 npm 패키지 @fiveeyes/workbench-engine 1.x를 받는다",
+  "plugins": [
+    {
+      "name": "workbench",
+      "source": { "source": "npm", "package": "@fiveeyes/workbench-engine", "version": "^1" },
+      "description": "작업 보드 이슈와 기록 문서를 git 문서 저장소에 두고 다루는 스킬과 명령(wb)"
+    }
+  ]
+}

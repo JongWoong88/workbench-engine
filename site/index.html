@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 스크립트와 연결은 같은 출처(wb board)에서만 허용한다. 서버도 같은 정책을 헤더로 보낸다 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>workbench 보드</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="vendor/hljs-light.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="vendor/hljs-dark.css" media="(prefers-color-scheme: dark)">
+</head>
+<body>
+  <!-- 앱 요소 id는 wb- 접두를 쓴다. 렌더링한 본문은 이 접두의 id를 가질 수 없다(render.mjs) -->
+  <header class="top">
+    <h1>workbench 보드</h1>
+    <form class="filters" id="wb-filters" autocomplete="off">
+      <label>뷰 <select name="view" id="wb-f-view"></select></label>
+      <label>project <select name="project" id="wb-f-project"></select></label>
+      <label>유형 <select name="type" id="wb-f-type"></select></label>
+      <div class="multi" id="wb-f-author-box">
+        <button type="button" id="wb-f-author" aria-expanded="false" aria-controls="wb-f-author-list">작성자 전체</button>
+        <div class="multi-list" id="wb-f-author-list" hidden>
+          <button type="button" id="wb-f-author-clear">모두 해제</button>
+          <div id="wb-f-author-options" role="group" aria-label="작성자"></div>
+        </div>
+      </div>
+      <label class="grow">검색 <input type="search" name="q" id="wb-f-q" placeholder="task_id·제목"></label>
+      <label class="check"><input type="checkbox" name="archived" id="wb-f-archived"> 보관 이슈 보기</label>
+      <button type="button" id="wb-help-toggle" aria-expanded="false" aria-controls="wb-help">워크플로</button>
+    </form>
+    <button type="button" id="wb-new-open" class="top-button" hidden>새 이슈 프롬프트</button>
+    <span id="wb-mode" class="account" hidden>push 전 내용 포함</span>
+  </header>
+  <section id="wb-help" class="help" hidden></section>
+  <div id="wb-errors" class="banner" hidden></div>
+  <main id="wb-board" class="board" aria-live="polite">
+    <p class="empty">보드를 읽는 중…</p>
+  </main>
+  <footer class="status" id="wb-status"></footer>
+  <dialog id="wb-task-dialog" class="task-dialog" aria-labelledby="wb-task-title">
+    <div class="dialog-bar">
+      <span id="wb-task-title" class="dialog-title"></span>
+      <span id="wb-task-actions" class="dialog-actions"></span>
+      <span class="sr-only" aria-live="polite"></span>
+      <button type="button" id="wb-task-close" class="icon" aria-label="닫기">✕</button>
+    </div>
+    <div id="wb-task-body" class="dialog-body"></div>
+  </dialog>
+  <dialog id="wb-new-dialog" class="task-dialog new-dialog" aria-labelledby="wb-new-title">
+    <div class="dialog-bar">
+      <span id="wb-new-title" class="dialog-title">새 이슈 프롬프트</span>
+      <span class="sr-only" aria-live="polite"></span>
+      <button type="button" id="wb-new-close" class="icon" aria-label="닫기">✕</button>
+    </div>
+    <div class="dialog-body">
+      <label for="wb-new-text" class="new-hint">제목·project·유형(hotfix·feature·refact·improvement·research)·본문으로 남길 내용을 자유롭게 쓴다. 빠진 값은 스킬이 묻는다.</label>
+      <textarea id="wb-new-text" class="new-text" rows="10"></textarea>
+      <div class="prompt-bar"><button type="button" id="wb-new-copy" disabled>/workbench:new-task 프롬프트 복사</button></div>
+      <div id="wb-new-fallback" class="prompt-fallback"></div>
+    </div>
+  </dialog>
+  <script src="app.js"></script>
+</body>
+</html>

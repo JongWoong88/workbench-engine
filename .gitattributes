@@ -1,0 +1,14 @@
+# 스크립트·대응표·문서는 LF 고정 (CRLF면 bash·node shebang이 \r 때문에 실패하고, TSV 마지막 열에 \r이 붙는다)
+*.sh  text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.tsv text eol=lf
+*.md  text eol=lf
+*.css text eol=lf
+plugin/templates/githooks/* text eol=lf
+*.yml  text eol=lf
+*.js   text eol=lf
+*.html text eol=lf
+# 플러그인 실행 진입점: sh는 LF, cmd는 CRLF
+plugin/bin/wb text eol=lf
+*.cmd text eol=crlf
