@@ -4,5 +4,6 @@
   "repoPaths": {
     "group/web-admin": "/home/me/other/web-admin"
   },
-  "remote": "origin"
+  "remote": "origin",
+  "boardAutostart": false
 }

@@ -113,9 +113,16 @@ projects.tsv는 한 줄에 project 하나, 열 네 개(탭 구분)다. 형식은
 - 예면, 확인받은 뒤 `npm i -g @fiveeyes/workbench-engine`. 사내 미러를 쓰면 먼저 `npm config set @fiveeyes:registry <미러 주소>`(주소는 사용자에게 묻는다)
 - 알린다: 전역 설치는 플러그인과 따로 갱신된다(`npm update -g @fiveeyes/workbench-engine`). 설치하면 터미널 커밋에서도 커밋 전 검사가 돈다
 
-## 7. 확인과 보고
+## 7. 보드 자동 실행 (선택)
+
+사용자에게 묻는다: "Claude Code 세션을 열 때마다 보드를 자동으로 띄우고, 세션을 모두 닫으면 끌까요? (처음 띄울 때 브라우저가 열립니다)"
+
+- 예면 `wb config set board-autostart on`. 다음 세션부터 적용된다고 알린다
+- 아니오면 넘어간다. 필요할 때 "보드 띄워 줘"라고 하면 된다
+
+## 8. 확인과 보고
 
 1. `wb --help` — `문서:` 줄이 정한 경로다
 2. `wb lint --all` — 오류 0
-3. 사용자에게 보드를 띄울지 묻고, 원하면 `wb board --open`(백그라운드로 뜨고 바로 돌아온다. 끌 때는 `wb board --stop`). 새로 만든 저장소를 아직 push하지 않았으면 `--worktree`를 붙인다
-4. 보고: 정한 값(문서 저장소 경로, 호스트, project·키, workspace-root), 실행한 일, 사람이 할 일(4-3의 5, 플러그인 자동 갱신 켜기: `/plugin` → 마켓플레이스 화면)
+3. 사용자에게 지금 보드를 띄울지 묻고, 원하면 `wb board --open`(백그라운드로 뜨고 바로 돌아온다. 끌 때는 `wb board --stop`). 새로 만든 저장소를 아직 push하지 않았으면 `--worktree`를 붙인다
+4. 보고: 정한 값(문서 저장소 경로, 호스트, project·키, workspace-root, 보드 자동 실행), 실행한 일, 사람이 할 일(4-3의 5, 플러그인 자동 갱신 켜기: `/plugin` → 마켓플레이스 화면)

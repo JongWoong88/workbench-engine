@@ -3,6 +3,7 @@
 //   data-root:      문서 저장소(board/, records/, projects.tsv가 있는 clone) 경로
 //   workspace-root: 서비스 저장소들의 공통 상위 폴더. projects.tsv의 저장소 논리 경로가 이 폴더 기준이다
 //   repo-path:      저장소 논리 경로 하나를 이 PC의 실제 폴더로 바꾼다
+//   board-autostart: Claude Code 세션이 시작되면 보드를 띄우고, 세션이 모두 끝나면 끈다(기본 off)
 import fs from 'node:fs';
 import path from 'node:path';
 import { run, args, usage, Rejection } from './lib/report.mjs';
@@ -13,7 +14,8 @@ const USAGE = `사용법: wb config get
        wb config set workspace-root <경로>
        wb config set repo-path <논리 경로> <폴더>
        wb config set remote <원격 이름>
-       wb config unset data-root | workspace-root | remote | repo-path <논리 경로>
+       wb config set board-autostart on|off
+       wb config unset data-root | workspace-root | remote | board-autostart | repo-path <논리 경로>
   data-root       문서 저장소(board/, records/, projects.tsv가 있는 clone) 경로
                   우선순위: 환경변수 WORKBENCH_ROOT > 이 설정
   workspace-root  서비스 저장소들의 공통 상위 폴더 (그 아래 projects.tsv의 논리 경로대로 저장소가 있다)
@@ -21,9 +23,11 @@ const USAGE = `사용법: wb config get
   repo-path       projects.tsv의 저장소 논리 경로(예: group/app)를 이 PC의 실제 폴더로 바꾼다
                   설정하지 않은 저장소는 {workspace-root}/{논리 경로}다
   remote          문서 저장소 clone의 git 원격 이름 (기본 origin)
+  board-autostart on이면 Claude Code 세션이 시작될 때 보드를 백그라운드로 띄우고 브라우저를 연다.
+                  이 PC의 세션이 모두 끝나면(터미널을 닫아도) 보드가 스스로 꺼진다. 기본 off
   설정 파일: ~/.workbench/config.json (PC별, 저장소 밖)`;
 
-const KEYS = { 'data-root': 'dataRoot', 'workspace-root': 'workspaceRoot', 'repo-path': 'repoPaths', remote: 'remote' };
+const KEYS = { 'data-root': 'dataRoot', 'workspace-root': 'workspaceRoot', 'repo-path': 'repoPaths', remote: 'remote', 'board-autostart': 'boardAutostart' };
 
 /** 문서 저장소가 정해져 있으면 projects.tsv의 저장소 중 root 아래에 git 저장소로 있는 것 */
 function describe(root, dataRoot = DATA.root) {
@@ -51,13 +55,14 @@ run(async () => {
     const d = describe(WS);
     const repoPaths = conf.repoPaths ?? {};
     return {
-      data: { file: USER_CONFIG, dataRoot: DATA.root, dataRootSource: DATA.source, workspaceRoot: WS, workspaceRootSource: WS_SOURCE, remote: REMOTE_NAME, repoPaths, ...d },
+      data: { file: USER_CONFIG, dataRoot: DATA.root, dataRootSource: DATA.source, workspaceRoot: WS, workspaceRootSource: WS_SOURCE, remote: REMOTE_NAME, repoPaths, boardAutostart: conf.boardAutostart === true, ...d },
       text: [
         `설정 파일: ${USER_CONFIG}${exists(USER_CONFIG) ? '' : ' (없음)'}`,
         `data-root: ${DATA.root ? `${DATA.root}  (${DATA.source})` : '(정해지지 않음 — set data-root <경로>로 설정한다)'}`,
         `workspace-root: ${WS}  (${WS_SOURCE})`,
         reposLine(d),
         `remote: ${REMOTE_NAME}${conf.remote ? '' : ' (기본값)'}`,
+        `board-autostart: ${conf.boardAutostart === true ? 'on' : 'off'}${conf.boardAutostart === undefined ? ' (기본값)' : ''}`,
         ...Object.entries(repoPaths).map(([k, v]) => `repo-path: ${k} → ${v}`),
       ].filter(Boolean).join('\n'),
     };
@@ -96,7 +101,14 @@ run(async () => {
       writeUserConfig({ ...conf, remote: values[0] });
       return { data: { file: USER_CONFIG, remote: values[0] }, text: `설정: remote = ${values[0]} (${USER_CONFIG})` };
     }
-    throw usage('set data-root <경로>, set workspace-root <경로>, set repo-path <논리 경로> <폴더>, set remote <이름> 중 하나로 쓴다', USAGE);
+    if (key === 'board-autostart' && values.length === 1) {
+      if (!['on', 'off'].includes(values[0])) throw usage(`board-autostart는 on 또는 off다: ${values[0]}`, USAGE);
+      const on = values[0] === 'on';
+      writeUserConfig({ ...conf, boardAutostart: on });
+      const notes = on ? ['다음 Claude Code 세션부터 적용된다. 지금 띄우려면 wb board --open'] : ['이미 자동으로 뜬 보드는 세션이 모두 끝날 때 꺼진다. 지금 끄려면 wb board --stop'];
+      return { data: { file: USER_CONFIG, boardAutostart: on, notes }, text: [`설정: board-autostart = ${values[0]} (${USER_CONFIG})`, ...notes.map((n) => `  참고: ${n}`)].join('\n') };
+    }
+    throw usage('set data-root <경로>, set workspace-root <경로>, set repo-path <논리 경로> <폴더>, set remote <이름>, set board-autostart on|off 중 하나로 쓴다', USAGE);
   }
 
   if (op === 'unset') {
@@ -106,13 +118,13 @@ run(async () => {
       writeUserConfig({ ...conf, repoPaths: rest });
       return { data: { removed: had !== undefined }, text: had !== undefined ? `해제: repo-path ${logical}` : `변경 없음: repo-path ${logical}가 설정되어 있지 않다` };
     }
-    if ((key === 'data-root' || key === 'workspace-root' || key === 'remote') && !values.length) {
+    if ((key === 'data-root' || key === 'workspace-root' || key === 'remote' || key === 'board-autostart') && !values.length) {
       const field = KEYS[key];
       const had = conf[field] !== undefined;
       writeUserConfig({ ...conf, [field]: undefined });
       return { data: { removed: had }, text: had ? `해제: ${key}` : `변경 없음: ${key}가 설정되어 있지 않다` };
     }
-    throw usage('unset data-root, unset workspace-root, unset remote, unset repo-path <논리 경로> 중 하나로 쓴다', USAGE);
+    throw usage('unset data-root, unset workspace-root, unset remote, unset board-autostart, unset repo-path <논리 경로> 중 하나로 쓴다', USAGE);
   }
   throw usage(`동작은 get, set, unset 중 하나다: ${op ?? '(없음)'}`, USAGE);
 }, USAGE, { needsData: false });

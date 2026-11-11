@@ -185,7 +185,7 @@ updated: 2026-09-28
 
 ### PC별 설정 `~/.workbench/config.json`
 
-`wb config`로 읽고 쓴다. 손으로 고쳐도 된다 — JSON 키는 `dataRoot`, `workspaceRoot`, `repoPaths`(논리 경로 → 폴더), `remote`다.
+`wb config`로 읽고 쓴다. 손으로 고쳐도 된다 — JSON 키는 `dataRoot`, `workspaceRoot`, `repoPaths`(논리 경로 → 폴더), `remote`, `boardAutostart`다.
 
 | 명령 | 뜻 |
 |---|---|
@@ -193,6 +193,7 @@ updated: 2026-09-28
 | `wb config set workspace-root <경로>` | 서비스 저장소들의 공통 상위 폴더. 기본값은 문서 저장소의 상위 폴더. 환경변수 `WORKSPACE_ROOT`가 우선한다 |
 | `wb config set repo-path <논리 경로> <폴더>` | 저장소 하나를 다른 폴더에 둔 경우 |
 | `wb config set remote <이름>` | 문서 저장소 clone의 git 원격 이름(기본 `origin`) |
+| `wb config set board-autostart on\|off` | Claude Code 세션이 시작되면 보드를 백그라운드로 띄우고(새로 띄울 때만 브라우저를 연다), 이 PC의 세션이 모두 끝나면 끈다. 비대화형 실행에는 띄우지 않는다. 기본 `off`. 세션 기록은 `~/.workbench/board-sessions/` |
 | `wb config get` | 지금 값과 출처 |
 
 ## 도구 (`wb`)
@@ -213,7 +214,7 @@ updated: 2026-09-28
 | `wb absorb-candidates [--task \| --project] [--since]` | 종료 이슈의 기록과 대상 저장소의 문서 루트 목록 |
 | `wb decision-stats [--task \| --project] [--by harness] [--check]` | 이슈 폴더 `decisions.md`의 담당자 평가 지표와 형식 검사 |
 | `wb config …` | PC별 설정 |
-| `wb board [--port] [--open] [--worktree] [--no-fetch] [--background]`, `wb board --stop` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 터미널에서는 그 자리에서 돌고(Ctrl+C로 끝), 터미널이 아니면(에이전트) 백그라운드로 띄우고 바로 돌아온다. 이미 떠 있으면 그 주소를 알린다. `--stop`이 끈다. 떠 있는 보드는 `~/.workbench/board.json`에 적는다 |
+| `wb board [--port] [--open] [--worktree] [--no-fetch] [--background]`, `wb board --stop` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 터미널에서는 그 자리에서 돌고(Ctrl+C로 끝), 터미널이 아니면(에이전트) 백그라운드로 띄우고 바로 돌아온다. 이미 떠 있으면 그 주소를 알린다. `--stop`이 끈다. 떠 있는 보드는 `~/.workbench/board.json`에 적는다. `--auto`는 세션 시작 훅(`board-autostart`)이 쓴다 |
 | `wb init <폴더> --host gitlab\|github [--web] [--repo] [--branch] [--set-data-root]` | 새 문서 저장소 템플릿(보드·기록 폴더, 대응표 머리, 공유 설정, hook, CI 파일) |
 | `wb --version` | 설치 버전. 결정 기록의 하네스 값으로 쓴다 |
 

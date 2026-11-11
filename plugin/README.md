@@ -21,7 +21,8 @@
 |---|---|
 | 보드 이슈 생성·수정·보관 스킬, 기록 문서(조사·제안·설계·작업 계획·검토) 스킬, 산출물 링크와 커밋·push | 도구 실행을 막거나 바꾸는 훅, 출력 스타일, MCP 서버, 기본 에이전트 교체 — 다른 프로젝트에서의 에이전트 동작은 바꾸지 않는다 |
 | 명령 진입점 `wb` (허용된 workbench 명령만 실행) | 사용자 설정 변경, 전역 패키지 설치(요청할 때만 에이전트가 한다) |
-| 세션 시작 안내 훅 하나([`hooks/session-context.mjs`](hooks/session-context.mjs)) — `wb`와 규칙 문서의 위치, 문서 저장소 위치, task_id 접두사를 세션 컨텍스트에 싣는다. 문서 저장소가 정해지지 않았으면 구성하라고 알린다 | 규칙 본문을 싣는 것 — 안내와 경로만 싣는다 |
+| 세션 시작 훅([`hooks/session-context.mjs`](hooks/session-context.mjs)) — `wb`와 규칙 문서의 위치, 문서 저장소 위치, task_id 접두사를 세션 컨텍스트에 싣는다. 문서 저장소가 정해지지 않았으면 구성하라고 알린다. [보드 자동 실행](#세션과-함께-자동으로-띄우기)을 켰으면 보드를 띄운다 | 규칙 본문을 싣는 것 — 안내와 경로만 싣는다 |
+| 세션 종료 훅([`hooks/session-end.mjs`](hooks/session-end.mjs)) — 보드 자동 실행을 켰을 때만 끝난 세션의 기록을 지운다 | 그 밖의 세션 종료 처리 |
 
 ## 준비물
 
@@ -50,7 +51,7 @@ claude plugin install workbench@fiveeyes --scope user
 |---|---|---|
 | 팀 문서 저장소에 합류 | clone 주소(또는 이미 있는 clone 경로), clone할 위치 | clone, `data-root` 설정, 커밋 전 검사 연결, 기본 브랜치 확인 |
 | 새 문서 저장소 만들기 | 폴더 위치, 호스트 종류(GitLab·GitHub), 호스트 웹 주소, 호스트의 저장소 경로, 기본 브랜치, 처음 등록할 project와 task_id 키·서비스 저장소, 호스트의 빈 저장소 주소 | `wb init`, `projects.tsv` 작성, 검사, 원격 연결, 첫 커밋·push |
-| 공통 | 서비스 저장소가 다른 폴더에 있는지, 터미널용 `wb`를 설치할지 | `workspace-root`·`repo-path` 설정, (원할 때) 전역 설치, 확인과 보드 실행 |
+| 공통 | 서비스 저장소가 다른 폴더에 있는지, 터미널용 `wb`를 설치할지, 세션을 열 때 보드를 자동으로 띄울지 | `workspace-root`·`repo-path` 설정, (원할 때) 전역 설치·보드 자동 실행, 확인과 보드 실행 |
 
 사람이 해야 하는 일:
 
@@ -151,6 +152,7 @@ common	CMN	-	-
 | 서비스 저장소를 문서 저장소와 다른 상위 폴더에 둠 | `wb config set workspace-root <경로>` | `workspaceRoot` |
 | 저장소 하나만 다른 폴더에 둠 | `wb config set repo-path <projects.tsv의 논리 경로> <폴더>` | `repoPaths` (논리 경로 → 폴더) |
 | 문서 저장소의 git 원격 이름이 `origin`이 아님 | `wb config set remote <이름>` | `remote` |
+| 세션이 시작되면 보드를 띄우고 세션이 모두 끝나면 끄기([자세히](#세션과-함께-자동으로-띄우기)) | `wb config set board-autostart on` | `boardAutostart` (기본 `false`) |
 | 지금 값과 출처, 이 PC에 없는 서비스 저장소 | `wb config get` | — |
 | 값 지우기 | `wb config unset <키>` | — |
 
@@ -174,6 +176,17 @@ common	CMN	-	-
 - 이미 떠 있으면 새로 띄우지 않고 그 주소를 알린다. 포트를 바꾸려면 `--port <번호>`
 - 터미널용 `wb`를 설치했으면 터미널에서 `wb board --open`으로도 띄운다. 이때는 그 터미널에서 돌고 Ctrl+C로 끝낸다
 - 백그라운드 보드의 상태는 `~/.workbench/board.json`, 로그는 `~/.workbench/board.log`에 있다
+
+### 세션과 함께 자동으로 띄우기
+
+`wb config set board-autostart on`(또는 에이전트에게 "보드 자동 실행 켜 줘")을 하면, Claude Code 세션이 시작될 때 보드가 백그라운드로 뜨고 브라우저가 열린다. 이 PC의 Claude Code 세션이 모두 끝나면 보드가 스스로 꺼진다. 기본은 꺼져 있다.
+
+- 브라우저는 보드를 새로 띄울 때만 열린다. 세션을 더 열어도 떠 있는 보드를 같이 쓰고 브라우저를 다시 열지 않는다
+- 꺼지는 시점: 세션 시작 훅이 그 세션의 Claude Code 프로세스를 `~/.workbench/board-sessions/`에 적고, 보드가 5초마다 그 프로세스들이 살아 있는지 본다. 모두 없어지고 20초가 지나면 꺼진다. 그래서 `/exit`로 끝내도, 터미널 창을 그냥 닫아도 꺼진다. `/clear`처럼 세션이 바로 이어지면 꺼지지 않는다
+- 비대화형 실행(`claude -p`, SDK)에는 띄우지 않는다
+- 사람이나 에이전트가 따로 띄운 보드(`wb board --open`)는 세션이 끝나도 끄지 않는다. 자동으로 뜬 보드도 `wb board --stop`으로 바로 끌 수 있다
+- 세션의 Claude Code 프로세스를 찾지 못하는 환경이면 종료 훅이 기록을 지울 때 꺼진다. 종료 훅도 돌지 못하면 그 기록은 24시간 뒤에 정리된다
+- 끄기: `wb config set board-autostart off`
 
 ## 쓰는 법
 

@@ -71,5 +71,5 @@ test('예시 파일: 공유 설정·대응표 예시를 새 문서 저장소에 
   assert.equal(lint.json.errors, 0, lint.out);
   assert.equal(lint.json.warnings ?? 0, 0, lint.out);
   const user = JSON.parse(fs.readFileSync(path.join(SAMPLES, 'user-config.json'), 'utf8'));
-  assert.deepEqual(Object.keys(user).sort(), ['dataRoot', 'remote', 'repoPaths', 'workspaceRoot']);
+  assert.deepEqual(Object.keys(user).sort(), ['boardAutostart', 'dataRoot', 'remote', 'repoPaths', 'workspaceRoot']);
 });

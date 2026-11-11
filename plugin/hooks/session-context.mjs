@@ -5,10 +5,14 @@
 //   문서 저장소 위치는 `wb`와 같은 순서로 찾는다: 환경변수 WORKBENCH_ROOT > PC별 설정(~/.workbench/config.json)의 dataRoot
 //   출력(plain stdout)은 Claude Code가 세션 컨텍스트로 넣는다. 상한 10,000자 — 안내와 경로만 싣고 규칙 본문은 싣지 않는다.
 //   어떤 경우에도 세션 시작을 막지 않는다: 실패하면 아무것도 출력하지 않고 0으로 끝낸다.
+//   PC별 설정 boardAutostart가 켜져 있으면 이 세션을 보드 세션으로 기록하고(board-sessions.mjs) 보드를 백그라운드로 띄운다.
+//   보드를 새로 띄울 때만 브라우저가 열린다. 비대화형 실행(claude -p)에는 띄우지 않는다. 훅은 기다리지 않고 바로 끝난다.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { registerSession, findClaudeProcess, isHeadless } from './board-sessions.mjs';
 
 const toPosix = (p) => p.split(path.sep).join('/');
 
@@ -34,23 +38,43 @@ try {
     '- 이슈 발급·수정·보관과 기록 작성 절차는 `workbench:*` 스킬에 있다.',
   );
 
+  if (data && userConfig().boardAutostart === true) {
+    try {
+      const line = autostartBoard(pluginRoot);
+      if (line) lines.push(line);
+    } catch { /* 보드를 못 띄워도 세션은 그대로 시작한다 */ }
+  }
+
   process.stdout.write(lines.join('\n') + '\n');
 } catch {
   // 안내를 싣지 못해도 세션은 그대로 시작한다
 }
 process.exit(0);
 
+/** PC별 설정. 못 읽으면 빈 설정 */
+function userConfig() {
+  try {
+    const dir = process.env.WORKBENCH_CONFIG_DIR || path.join(os.homedir(), '.workbench');
+    return JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** 이 세션을 기록하고 보드를 백그라운드로 띄운다(이미 떠 있으면 wb가 아무것도 하지 않는다). 안내 한 줄, 띄우지 않았으면 null */
+function autostartBoard(pluginRoot) {
+  let input = {};
+  try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { /* 입력 없이 실행됨 */ }
+  const claude = findClaudeProcess();
+  if (claude && isHeadless(claude.cmd) && !process.env.WORKBENCH_BOARD_AUTOSTART_HEADLESS) return null;
+  registerSession({ sessionId: input.session_id || `pid-${claude?.pid ?? process.ppid}`, pid: claude?.pid });
+  spawn(process.execPath, [path.join(pluginRoot, 'bin', 'wb.mjs'), 'board', '--auto'], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+  return '- 로컬 보드를 자동으로 띄운다(PC별 설정 board-autostart). 처음 띄울 때만 브라우저가 열리고, 이 PC의 Claude Code 세션이 모두 끝나면 꺼진다. 주소는 `wb board`, 지금 끄려면 `wb board --stop`.';
+}
+
 /** 문서 저장소 위치. board/ 폴더가 있어야 문서 저장소로 본다. 못 찾으면 null */
 function dataRoot() {
-  let root = process.env.WORKBENCH_ROOT || null;
-  if (!root) {
-    try {
-      const dir = process.env.WORKBENCH_CONFIG_DIR || path.join(os.homedir(), '.workbench');
-      root = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')).dataRoot || null;
-    } catch {
-      root = null;
-    }
-  }
+  const root = process.env.WORKBENCH_ROOT || userConfig().dataRoot || null;
   return root && fs.existsSync(path.join(root, 'board')) ? path.resolve(root) : null;
 }
 

@@ -5,6 +5,8 @@
 //   실행 방식: 터미널이면 그 자리에서 돌고 Ctrl+C로 끝낸다. 터미널이 아니면(agent의 Bash 도구) 백그라운드 프로세스로 띄우고
 //   주소를 알린 뒤 바로 돌아온다 — agent가 서버를 붙잡고 기다리지 않게 한다. 끌 때는 `wb board --stop`.
 //   떠 있는 보드는 ~/.workbench/board.json(PC별 상태, 설치 폴더 밖)에 적는다. 다시 부르면 떠 있는 보드를 그대로 알린다.
+//   --auto는 세션 시작 훅(PC별 설정 boardAutostart)이 부른다. 떠 있으면 아무것도 하지 않고, 새로 띄울 때만 브라우저를 연다.
+//   이렇게 띄운 보드는 기록된 Claude Code 세션(hooks/board-sessions.mjs)이 모두 끝나면 잠시 기다렸다가 스스로 꺼진다.
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -16,6 +18,7 @@ import { loadSharedConfig } from './lib/shared-config.mjs';
 import { tryWithLock } from './lib/lock.mjs';
 import { createGitReader } from './lib/board-git.mjs';
 import { createBoardHandler, startBoardServer } from './lib/board-server.mjs';
+import { liveSessionCount } from '../hooks/board-sessions.mjs';
 
 const DEFAULT_PORT = 47800;
 const USAGE = `사용법: wb board [--port <번호>] [--open] [--worktree] [--no-fetch] [--background]
@@ -29,6 +32,7 @@ const USAGE = `사용법: wb board [--port <번호>] [--open] [--worktree] [--no
   --no-fetch    원격에서 받지 않는다(지금 clone에 있는 것만 보여 준다)
   --background  터미널에서도 백그라운드로 띄운다
   --stop        백그라운드로 띄운 보드를 끈다
+  --auto        세션 시작 훅이 쓴다: 떠 있으면 그대로 두고, 새로 띄울 때만 브라우저를 연다. 세션이 모두 끝나면 꺼진다
   fetch 주기: 공유 설정 board.fetchIntervalSec (기본 30초, 환경변수 WORKBENCH_BOARD_FETCH_SEC)
   상태 파일: ~/.workbench/board.json, 백그라운드 로그: ~/.workbench/board.log`;
 
@@ -38,9 +42,15 @@ const STATE = path.join(USER_CONFIG_DIR, 'board.json');
 const LOG = path.join(USER_CONFIG_DIR, 'board.log');
 /** 백그라운드 실행이 띄운 자식 프로세스 표시. 자식은 그 자리에서 돈다 */
 const CHILD = process.env.WORKBENCH_BOARD_CHILD === '1';
+/** 세션 훅이 띄운 보드. 세션이 모두 끝나면 꺼진다 */
+const AUTO = CHILD && process.env.WORKBENCH_BOARD_AUTO === '1';
 const START_TIMEOUT_MS = 20000;
+/** 세션 확인 주기와, 세션이 없어진 뒤 끄기까지 기다리는 시간(/clear처럼 끝과 시작이 이어지는 경우를 넘긴다) */
+const SESSION_CHECK_MS = Number(process.env.WORKBENCH_BOARD_SESSION_CHECK_MS ?? 5000);
+const SESSION_GRACE_MS = Number(process.env.WORKBENCH_BOARD_SESSION_GRACE_MS ?? 20000);
 
 function openBrowser(url) {
+  if (process.env.WORKBENCH_BOARD_NO_BROWSER) return; // 시험
   const [cmd, a] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url]]
     : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
   try { spawn(cmd, a, { detached: true, stdio: 'ignore', windowsVerbatimArguments: process.platform === 'win32' }).unref(); } catch { /* 주소를 직접 연다 */ }
@@ -102,13 +112,15 @@ async function stop() {
 }
 
 /** 자기 자신을 백그라운드 자식으로 띄우고, 자식이 듣기 시작해 상태 파일을 적으면 돌아온다 */
-async function startBackground(values) {
+async function startBackground(values, { auto = false } = {}) {
   fs.mkdirSync(USER_CONFIG_DIR, { recursive: true });
-  removeState();
+  // 끝난 보드의 기록만 지운다. 막 뜨는 중인 다른 보드(세션 둘이 함께 시작한 경우)의 기록은 그대로 둔다
+  const prev = readState();
+  if (prev && (!Number.isInteger(prev.pid) || !pidAlive(prev.pid))) removeState(prev.pid);
   const log = fs.openSync(LOG, 'w');
   const childArgs = [path.join(ENGINE, 'bin', 'wb.mjs'), 'board', '--json',
     ...(values.port ? ['--port', values.port] : []), ...(values.worktree ? ['--worktree'] : []), ...(values['no-fetch'] ? ['--no-fetch'] : [])];
-  const child = spawn(process.execPath, childArgs, { detached: true, stdio: ['ignore', log, log], windowsHide: true, env: { ...process.env, WORKBENCH_BOARD_CHILD: '1' } });
+  const child = spawn(process.execPath, childArgs, { detached: true, stdio: ['ignore', log, log], windowsHide: true, env: { ...process.env, WORKBENCH_BOARD_CHILD: '1', WORKBENCH_BOARD_AUTO: auto ? '1' : '' } });
   fs.closeSync(log);
 
   const outcome = await new Promise((resolve) => {
@@ -176,7 +188,7 @@ async function serve(values, portText) {
   if (!values['no-fetch'] && fetchSec > 0) setInterval(doFetch, fetchSec * 1000);
 
   // 떠 있는 보드를 적는다. 다른 살아 있는 보드의 기록은 덮지 않는다
-  const me = { pid: process.pid, port, url, dataRoot: WB, worktree: Boolean(values.worktree), background: CHILD, startedAt: new Date().toISOString() };
+  const me = { pid: process.pid, port, url, dataRoot: WB, worktree: Boolean(values.worktree), background: CHILD, auto: AUTO, startedAt: new Date().toISOString() };
   const prev = readState();
   if (!prev || prev.pid === process.pid || !Number.isInteger(prev.pid) || !pidAlive(prev.pid)) {
     try {
@@ -188,6 +200,18 @@ async function serve(values, portText) {
   process.on('exit', cleanup);
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { cleanup(); process.exit(0); });
 
+  // 세션 훅이 띄운 보드: 살아 있는 세션이 없는 채로 SESSION_GRACE_MS가 지나면 끈다(exit 처리가 상태 파일을 지운다)
+  if (AUTO) {
+    let emptySince = null;
+    setInterval(() => {
+      let live;
+      try { live = liveSessionCount(USER_CONFIG_DIR); } catch { return; }
+      if (live > 0) { emptySince = null; return; }
+      emptySince ??= Date.now();
+      if (Date.now() - emptySince >= SESSION_GRACE_MS) process.exit(0);
+    }, SESSION_CHECK_MS);
+  }
+
   if (values.open) openBrowser(url);
   return {
     data: { url, port, pid: process.pid, background: CHILD, worktree: Boolean(values.worktree), dataRoot: WB },
@@ -198,9 +222,10 @@ async function serve(values, portText) {
 run(async () => {
   const { values } = args({
     port: { type: 'string' }, open: { type: 'boolean' }, worktree: { type: 'boolean' }, 'no-fetch': { type: 'boolean' },
-    background: { type: 'boolean' }, stop: { type: 'boolean' },
+    background: { type: 'boolean' }, stop: { type: 'boolean' }, auto: { type: 'boolean' },
   }, USAGE, { positionals: false });
   if (values.stop) return stop();
+  if (values.auto && (values.port || values.worktree || values['no-fetch'] || values.background || values.open)) throw usage('--auto는 다른 옵션과 함께 쓰지 않는다', USAGE);
 
   const portText = values.port ?? process.env.WORKBENCH_BOARD_PORT ?? String(DEFAULT_PORT);
   if (!/^\d{1,5}$/.test(portText) || Number(portText) > 65535) throw usage(`포트는 0~65535의 숫자다: ${portText}`, USAGE);
@@ -209,7 +234,7 @@ run(async () => {
   }
 
   // 터미널(또는 시험의 WORKBENCH_BOARD_ALLOW_NONTTY)이면 그 자리에서, 아니면 백그라운드로
-  const foreground = CHILD || (!values.background && (process.stdout.isTTY || process.env.WORKBENCH_BOARD_ALLOW_NONTTY));
+  const foreground = CHILD || (!values.background && !values.auto && (process.stdout.isTTY || process.env.WORKBENCH_BOARD_ALLOW_NONTTY));
   if (foreground) return serve(values, portText);
 
   const live = await liveBoard();
@@ -217,7 +242,7 @@ run(async () => {
     if (values.open) openBrowser(live.url);
     return describe(live, { reused: true });
   }
-  const s = await startBackground(values);
-  if (values.open) openBrowser(s.url);
+  const s = await startBackground(values, { auto: Boolean(values.auto) });
+  if (values.open || values.auto) openBrowser(s.url);
   return describe(s, { reused: false });
 }, USAGE, { needsData: !process.argv.includes('--stop') });
