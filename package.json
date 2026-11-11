@@ -1,6 +1,6 @@
 {
   "name": "workbench-engine-dev",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "workbench 엔진 개발 저장소. 게시 패키지는 npm run package:build가 dist/package/에 만든다",
   "engines": {

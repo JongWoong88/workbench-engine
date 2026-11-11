@@ -1,6 +1,6 @@
 {
   "name": "workbench",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "작업 보드 이슈와 기록 문서(조사·제안·설계·작업 계획)를 git 문서 저장소에 두고 발급·수정·보관·산출물 추적·로컬 보드로 다루는 스킬과 명령(wb)",
   "author": {
     "name": "fiveeyes"
