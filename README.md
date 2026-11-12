@@ -173,6 +173,66 @@ flowchart LR
 - 보드를 바꾸는 스킬은 사람이 시킬 때만 움직인다. `orchestrate`를 시켰다면 그 이슈의 컬럼 이동까지 맡긴 셈이다
 - 스킬은 일을 마치면 바꾼 파일만 문서 저장소의 기본 브랜치에 커밋하고 push한다. 다른 사람의 보드에는 다음 fetch 때(기본 30초마다) 나타난다
 
+## 구조
+
+```mermaid
+flowchart LR
+  subgraph PC["내 PC"]
+    CC["Claude Code<br>스킬 · wb"] -->|읽고 쓴다| DOC["문서 저장소 clone"]
+    CC -->|브랜치 · 코드| SVC["서비스 저장소"]
+    BOARD["로컬 보드<br>127.0.0.1"] -->|fetch해서 읽는다| DOC
+  end
+  DOC <-->|push · fetch| REMOTE[("팀 git 호스트<br>GitLab · GitHub")]
+  REMOTE -->|CI: wb lint --all| REMOTE
+```
+
+문서 저장소는 팀마다 하나씩 둔다. 이 저장소에는 엔진만 있고, 팀의 이슈와 기록은 각 팀의 문서 저장소에 있다.
+
+```text
+문서 저장소/
+├── board/tasks/APP-123.md          이슈: 컬럼·작성자·담당자·산출물·이력
+├── records/app/APP-123/            이슈별 기록
+│   ├── discovery.md
+│   ├── proposal.md
+│   ├── design-*.md
+│   ├── plan-*.md
+│   └── decisions.md                에이전트 결정과 담당자 평가
+├── projects.tsv                    project ↔ task_id 키 ↔ 서비스 저장소
+└── workbench.config.json           팀 공유 설정
+```
+
+## 시작하기
+
+준비물: Node 22 이상, git(문서 저장소에 push할 수 있는 자격 증명), Claude Code
+
+**1. 설치한다.** 에이전트가 서비스 저장소에서도 일하므로 사용자 범위로 설치한다.
+
+```bash
+claude plugin marketplace add JongWoong88/workbench-engine
+claude plugin install workbench@fiveeyes --scope user
+```
+
+**2. 구성은 에이전트에게 맡긴다.** 새 Claude Code 세션을 열고 이렇게 말한다.
+
+> 🤖 **workbench 설정해 줘**
+
+에이전트는 `/workbench:setup` 절차에 따라 필요한 값을 묻고, 정한 값을 보여 준 뒤 확인을 받고 진행한다.
+
+- 팀에 문서 저장소가 이미 있으면 clone 주소를 묻고, clone한 뒤 설정까지 한다
+- 없으면 폴더 위치, 호스트(GitLab·GitHub), 저장소 경로, 처음 등록할 project와 task_id 키를 물은 뒤 문서 저장소를 새로 만들어 push한다
+
+**3. 확인한다.** 새 세션에서 `/workbench:`를 입력해 스킬 목록이 뜨는지 본다. 에이전트에게 "wb lint --all 실행해 줘"라고 해서 오류가 하나도 없으면 된다.
+
+**4. 써 본다.**
+
+> 🤖 로그인 실패 원인 조사 건을 workbench 이슈로 만들어 줘. 유형은 hotfix
+>
+> 🤖 APP-123 계획까지 자동으로 진행해 줘
+>
+> 🤖 보드 띄워 줘
+
+직접 구성하는 법, 설정 파일, 보드, 스킬별 요청 예시, 문제 해결은 [사용 안내](plugin/README.md)에 있다.
+
 ## 보드 보는 법
 
 보드는 문서 저장소의 이슈 파일을 읽어서 보여 주기만 한다. 보드에서 직접 고치는 기능은 없다. 컬럼을 옮기거나 이슈를 만들 때는 보드가 만들어 주는 프롬프트를 복사해 에이전트에게 붙여 넣는다.
@@ -293,66 +353,6 @@ history:
 ```
 
 </details>
-
-## 구조
-
-```mermaid
-flowchart LR
-  subgraph PC["내 PC"]
-    CC["Claude Code<br>스킬 · wb"] -->|읽고 쓴다| DOC["문서 저장소 clone"]
-    CC -->|브랜치 · 코드| SVC["서비스 저장소"]
-    BOARD["로컬 보드<br>127.0.0.1"] -->|fetch해서 읽는다| DOC
-  end
-  DOC <-->|push · fetch| REMOTE[("팀 git 호스트<br>GitLab · GitHub")]
-  REMOTE -->|CI: wb lint --all| REMOTE
-```
-
-문서 저장소는 팀마다 하나씩 둔다. 이 저장소에는 엔진만 있고, 팀의 이슈와 기록은 각 팀의 문서 저장소에 있다.
-
-```text
-문서 저장소/
-├── board/tasks/APP-123.md          이슈: 컬럼·작성자·담당자·산출물·이력
-├── records/app/APP-123/            이슈별 기록
-│   ├── discovery.md
-│   ├── proposal.md
-│   ├── design-*.md
-│   ├── plan-*.md
-│   └── decisions.md                에이전트 결정과 담당자 평가
-├── projects.tsv                    project ↔ task_id 키 ↔ 서비스 저장소
-└── workbench.config.json           팀 공유 설정
-```
-
-## 시작하기
-
-준비물: Node 22 이상, git(문서 저장소에 push할 수 있는 자격 증명), Claude Code
-
-**1. 설치한다.** 에이전트가 서비스 저장소에서도 일하므로 사용자 범위로 설치한다.
-
-```bash
-claude plugin marketplace add JongWoong88/workbench-engine
-claude plugin install workbench@fiveeyes --scope user
-```
-
-**2. 구성은 에이전트에게 맡긴다.** 새 Claude Code 세션을 열고 이렇게 말한다.
-
-> 🤖 **workbench 설정해 줘**
-
-에이전트는 `/workbench:setup` 절차에 따라 필요한 값을 묻고, 정한 값을 보여 준 뒤 확인을 받고 진행한다.
-
-- 팀에 문서 저장소가 이미 있으면 clone 주소를 묻고, clone한 뒤 설정까지 한다
-- 없으면 폴더 위치, 호스트(GitLab·GitHub), 저장소 경로, 처음 등록할 project와 task_id 키를 물은 뒤 문서 저장소를 새로 만들어 push한다
-
-**3. 확인한다.** 새 세션에서 `/workbench:`를 입력해 스킬 목록이 뜨는지 본다. 에이전트에게 "wb lint --all 실행해 줘"라고 해서 오류가 하나도 없으면 된다.
-
-**4. 써 본다.**
-
-> 🤖 로그인 실패 원인 조사 건을 workbench 이슈로 만들어 줘. 유형은 hotfix
->
-> 🤖 APP-123 계획까지 자동으로 진행해 줘
->
-> 🤖 보드 띄워 줘
-
-직접 구성하는 법, 설정 파일, 보드, 스킬별 요청 예시, 문제 해결은 [사용 안내](plugin/README.md)에 있다.
 
 ## 구성 요소
 

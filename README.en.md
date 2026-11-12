@@ -150,6 +150,66 @@ flowchart LR
 - Skills that change the board act only when a human asks. Asking for `orchestrate` includes moving that issue's columns
 - When a skill finishes, it commits and pushes only the files it changed to the docs repo's default branch. Others see it on their next fetch (every 30 seconds by default)
 
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph PC["Your machine"]
+    CC["Claude Code<br>skills · wb"] -->|read & write| DOC["docs repo clone"]
+    CC -->|branches · code| SVC["service repos"]
+    BOARD["local board<br>127.0.0.1"] -->|fetch & read| DOC
+  end
+  DOC <-->|push · fetch| REMOTE[("team git host<br>GitLab · GitHub")]
+  REMOTE -->|CI: wb lint --all| REMOTE
+```
+
+Each team has one docs repo. This repository holds only the engine; your team's issues and records live in your team's docs repo.
+
+```text
+docs-repo/
+├── board/tasks/APP-123.md          issue: column, author, assignee, outputs, history
+├── records/app/APP-123/            per-issue records
+│   ├── discovery.md
+│   ├── proposal.md
+│   ├── design-*.md
+│   ├── plan-*.md
+│   └── decisions.md                agent decisions and owner evaluations
+├── projects.tsv                    project ↔ task_id key ↔ service repos
+└── workbench.config.json           shared team settings
+```
+
+## Quick start
+
+Requirements: Node 22+, git (with credentials that can push to the docs repo), Claude Code
+
+**1. Install.** Agents also work inside service repos, so install at user scope.
+
+```bash
+claude plugin marketplace add JongWoong88/workbench-engine
+claude plugin install workbench@fiveeyes --scope user
+```
+
+**2. Let the agent set it up.** Open a new Claude Code session and say:
+
+> 🤖 **Set up workbench**
+
+The agent follows `/workbench:setup`: it asks for what it needs, shows you the values, and proceeds once you confirm.
+
+- If your team already has a docs repo: it asks for the clone URL, then clones and configures
+- If not: it asks for a folder, host (GitLab or GitHub), repository path, and the first project and task_id key, then creates the docs repo and pushes it
+
+**3. Verify.** In a new session, type `/workbench:` and the skill list appears. Ask the agent to "run wb lint --all" and it reports zero errors.
+
+**4. Try it.**
+
+> 🤖 Make a workbench issue for investigating the login failures. Type: hotfix
+>
+> 🤖 Take APP-123 all the way to a plan
+>
+> 🤖 Open the board
+
+Manual setup, config files, the board, example requests per skill, and troubleshooting are in the [user guide](plugin/README.md) (Korean).
+
 ## Reading the board
 
 The board only reads and displays the issue files in the docs repo. You can't edit anything on it. To move a column or create an issue, copy the prompt the board generates and paste it to the agent.
@@ -256,66 +316,6 @@ Login failure reports have increased since last week. Find the cause and scope t
 ```
 
 </details>
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph PC["Your machine"]
-    CC["Claude Code<br>skills · wb"] -->|read & write| DOC["docs repo clone"]
-    CC -->|branches · code| SVC["service repos"]
-    BOARD["local board<br>127.0.0.1"] -->|fetch & read| DOC
-  end
-  DOC <-->|push · fetch| REMOTE[("team git host<br>GitLab · GitHub")]
-  REMOTE -->|CI: wb lint --all| REMOTE
-```
-
-Each team has one docs repo. This repository holds only the engine; your team's issues and records live in your team's docs repo.
-
-```text
-docs-repo/
-├── board/tasks/APP-123.md          issue: column, author, assignee, outputs, history
-├── records/app/APP-123/            per-issue records
-│   ├── discovery.md
-│   ├── proposal.md
-│   ├── design-*.md
-│   ├── plan-*.md
-│   └── decisions.md                agent decisions and owner evaluations
-├── projects.tsv                    project ↔ task_id key ↔ service repos
-└── workbench.config.json           shared team settings
-```
-
-## Quick start
-
-Requirements: Node 22+, git (with credentials that can push to the docs repo), Claude Code
-
-**1. Install.** Agents also work inside service repos, so install at user scope.
-
-```bash
-claude plugin marketplace add JongWoong88/workbench-engine
-claude plugin install workbench@fiveeyes --scope user
-```
-
-**2. Let the agent set it up.** Open a new Claude Code session and say:
-
-> 🤖 **Set up workbench**
-
-The agent follows `/workbench:setup`: it asks for what it needs, shows you the values, and proceeds once you confirm.
-
-- If your team already has a docs repo: it asks for the clone URL, then clones and configures
-- If not: it asks for a folder, host (GitLab or GitHub), repository path, and the first project and task_id key, then creates the docs repo and pushes it
-
-**3. Verify.** In a new session, type `/workbench:` and the skill list appears. Ask the agent to "run wb lint --all" and it reports zero errors.
-
-**4. Try it.**
-
-> 🤖 Make a workbench issue for investigating the login failures. Type: hotfix
->
-> 🤖 Take APP-123 all the way to a plan
->
-> 🤖 Open the board
-
-Manual setup, config files, the board, example requests per skill, and troubleshooting are in the [user guide](plugin/README.md) (Korean).
 
 ## What's inside
 
