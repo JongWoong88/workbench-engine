@@ -19,13 +19,14 @@
 </p>
 
 <!--
-  ■ README 이미지 안내 (3장. 1·2는 꼭 넣고, 3은 있으면 좋다)
+  ■ README 이미지 안내 (4장. ①②④는 꼭 넣고, ③은 있으면 좋다)
 
   이미지 경로 (저장소 루트 기준. README.md와 README.en.md가 같은 파일을 쓴다)
   - .github/readme/board-light.png     ① 보드 전체, 라이트 모드 (필수)
   - .github/readme/board-dark.png      ① 보드 전체, 다크 모드 (선택)
   - .github/readme/task-dialog.png     ② 이슈 팝업 (필수)
   - .github/readme/decisions-view.png  ③ 보드에서 연 decisions.md (선택)
+  - .github/readme/cards.png           ④ 카드 확대 (필수)
 
   공통 준비
   - 실제 팀 문서 저장소로 찍지 않는다. 이슈 키·저장소 경로·사람 이름이 그대로 공개된다(CLAUDE.md "인스턴스 값" 규칙, check-public 금지어).
@@ -40,12 +41,13 @@
 
   ① 보드 전체 화면 — 이 자리(맨 위). 첫 화면에서 "무엇을 하는 도구인가"를 보여 준다
   - 파일: .github/readme/board-light.png, (선택) .github/readme/board-dark.png
-  - 화면: 기본 뷰 "진행 현황". 필터는 모두 기본값. 팝업은 닫은 상태.
+  - 화면: 위쪽 뷰 목록에서 "진행 현황"을 고른다(기본은 "전체 컬럼"이다). 다른 필터는 기본값. 팝업은 닫은 상태.
   - 데이터: 이슈 10~12개를 Backlog·Discovery·Proposal·Design·Planning·In Progress에 고루 둔다. 한 컬럼에 몰리지 않게.
     · project 3개(APP·WEB·CMN)와 유형(hotfix·feature·improvement 등)을 섞는다
-    · Planning에 부모 이슈 1개, In Progress에 그 child 이슈 2개 (parent 관계가 카드에 보이게)
-    · 산출물이 있는 카드를 몇 개 둔다(카드에 "산출물 N" 표시)
-    · 아래 ②·③에 나오는 APP-124, APP-120도 이 보드에 들어 있어야 한다
+    · Planning에 부모 이슈 APP-120 "환불 가능 기간 정책"(feature), In Progress에 그 child 이슈 APP-125·APP-126
+    · Planning에 APP-124 "로그인 실패 원인 조사"(hotfix, 산출물 3)
+    · 산출물이 있는 카드를 몇 개 더 둔다(카드에 "산출물 N" 표시)
+    · ②③④는 이 시연 저장소를 그대로 쓴다
   - 다크 모드도 찍었다면 아래 <picture>를 그대로 쓰고, 라이트만 있으면 <source> 줄을 지운다.
 
 <p align="center">
@@ -85,22 +87,6 @@ AI:   평가를 적었습니다(승인 2, 수정 1).
 AI:   http://127.0.0.1:47800/ 에 띄웠습니다.
 ```
 
-<!--
-  ② 이슈 팝업 — 이 자리(대화 예시 바로 아래). 위 대화가 끝난 뒤 보드에 무엇이 남는지 보여 준다
-  - 파일: .github/readme/task-dialog.png
-  - 화면: 보드에서 APP-124 카드를 눌러 연 팝업. 팝업만 잘라서 찍는다(뒤 보드는 빼거나 살짝만).
-  - 데이터: 위 대화와 맞춘다.
-    · 제목 "로그인 실패 원인 조사", project app, 유형 hotfix, 컬럼 📝 Planning
-    · 산출물 3개: discovery.md(현황 조사), plan-login.md(작업 계획), decisions.md(agent 결정과 담당자 평가)
-    · History를 펼쳐 Backlog → Discovery → Planning 이동이 보이게 한다
-    · 본문은 두세 줄이면 충분하다
-  - 팝업 위쪽의 프롬프트 복사 버튼(이동·폐기)이 보이게 둔다. 보드가 읽기 전용이고 수정은 에이전트에게 시킨다는 점이 드러난다.
-
-<p align="center">
-  <img src=".github/readme/task-dialog.png" alt="APP-124 이슈 팝업: 조사·계획·결정 기록이 산출물로 연결되어 있다" width="720">
-</p>
--->
-
 <details>
 <summary><strong><code>decisions.md</code> 예시</strong></summary>
 
@@ -139,13 +125,13 @@ AI-DLC(AI-Driven Development Lifecycle)는 조사·제안·설계·계획을 AI�
 
 | 부딪히는 문제 | workbench에서는 |
 |---|---|
-| **대화가 끝나면 결과도 사라진다.** 조사한 내용도, 그렇게 판단한 근거도 세션과 함께 없어진다 | 단계마다 기록 문서를 남기고 이슈에 링크한다. 다음 세션이나 다른 사람이 그대로 이어서 할 수 있다 |
-| **AI가 혼자 정해도 모른다.** 정책, 데이터, 다른 팀에 영향을 주는 선택을 아무 말 없이 해 버린다 | 그런 결정만 이슈마다 `decisions.md`에 적어 두고, 담당자가 평가한다 |
-| **곧바로 코드부터 쓴다** | 일의 크기에 맞춰 조사 → 제안 → 설계 → 계획 가운데 필요한 단계를 거치고, 단계마다 사람이 확인한다 |
-| **무엇이 어느 작업인지 모른다.** 조사 문서, 설계 문서, 계획서, 브랜치가 같은 일이라는 걸 사람이 기억해야 한다 | 이슈 `board/tasks/{task_id}.md`, 기록 폴더 `records/{project}/{task_id}/`, 브랜치 `{유형}/{task_id}`에 같은 task_id를 쓴다 |
-| **전체 현황을 한눈에 볼 수 없다.** 문서가 서비스 저장소마다 흩어져 있다 | 문서 저장소 하나에 모은다. 로컬 보드를 띄우면 여러 서비스 저장소의 작업을 한 화면에서 본다 |
-| **쓰는 사람마다 형식이 다르다.** 사람마다, 세션마다 제각각이라 다음 세션의 에이전트가 이어 읽기 어렵다 | 형식 규칙을 하나로 정하고 `wb lint`, 커밋 전 검사, 문서 저장소 CI에서 같은 규칙으로 검사한다 |
-| **에이전트가 나아지지 않는다.** 에이전트의 판단이 맞았는지 따져 본 기록이 없다 | 담당자 평가를 지표로 모아 스킬을 고칠 근거로 삼는다 |
+| 대화가 끝나면 결과도 사라진다 | 단계마다 기록 문서를 남기고 이슈에 링크한다. 다음 세션이나 다른 사람이 그대로 이어서 할 수 있다 |
+| AI가 혼자 정해도 모른다 | 그런 결정만 이슈마다 `decisions.md`에 적어 두고, 담당자가 평가한다 |
+| 곧바로 코드부터 쓴다 | 일의 크기에 맞춰 조사 → 제안 → 설계 → 계획 가운데 필요한 단계를 거치고, 단계마다 사람이 확인한다 |
+| 무엇이 어느 작업인지 모른다 | 이슈 `board/tasks/{task_id}.md`, 기록 폴더 `records/{project}/{task_id}/`, 브랜치 `{유형}/{task_id}`에 같은 task_id를 쓴다 |
+| 전체 현황을 한눈에 볼 수 없다 | 문서 저장소 하나에 모은다. 로컬 보드를 띄우면 여러 서비스 저장소의 작업을 한 화면에서 본다 |
+| 쓰는 사람마다 형식이 다르다 | 형식 규칙을 하나로 정하고 `wb lint`, 커밋 전 검사, 문서 저장소 CI에서 같은 규칙으로 검사한다 |
+| 에이전트가 나아지지 않는다 | 담당자 평가를 지표로 모아 스킬을 고칠 근거로 삼는다 |
 
 ### 다른 방법과 견주어 보면
 
@@ -186,6 +172,127 @@ flowchart LR
 - 모든 이슈가 모든 단계를 거치지는 않는다. 문구 수정 같은 작은 일은 바로 Planning으로 간다
 - 보드를 바꾸는 스킬은 사람이 시킬 때만 움직인다. `orchestrate`를 시켰다면 그 이슈의 컬럼 이동까지 맡긴 셈이다
 - 스킬은 일을 마치면 바꾼 파일만 문서 저장소의 기본 브랜치에 커밋하고 push한다. 다른 사람의 보드에는 다음 fetch 때(기본 30초마다) 나타난다
+
+## 보드 보는 법
+
+보드는 문서 저장소의 이슈 파일을 읽어서 보여 주기만 한다. 보드에서 직접 고치는 기능은 없다. 컬럼을 옮기거나 이슈를 만들 때는 보드가 만들어 주는 프롬프트를 복사해 에이전트에게 붙여 넣는다.
+
+### 컬럼
+
+| 상태 | 컬럼 | 뜻 |
+|---|---|---|
+| 대기 | 📋 Backlog, 🧊 On Hold | 아직 시작하지 않은 일과 잠시 멈춘 일 |
+| 진행 | 🔍 Discovery, 🤝 Proposal, 📐 Design, 📝 Planning, 🏃 In Progress | 지금 하고 있는 단계. 처음 들어올 때 시작 시각이 찍힌다 |
+| 종료 | ✅ Done, 🗑️ Dropped | 끝낸 일과 그만둔 일. 들어올 때 완료 시각이 찍히고, 그 이슈의 기록 폴더는 더 고치지 않는다 |
+
+위쪽 뷰 목록에서 "진행 현황"을 고르면 Backlog부터 In Progress까지만 보인다. 보관한 이슈는 "보관 이슈 보기"를 켜야 보인다.
+
+### 카드
+
+<!--
+  ④ 카드 확대 — 이 자리. 카드에 붙은 표시를 읽을 수 있을 만큼 크게 보여 준다
+  - 파일: .github/readme/cards.png
+  - 화면: ①과 같은 보드에서 📝 Planning과 🏃 In Progress 두 컬럼만 잘라 찍는다.
+    브라우저 확대를 125~150%로 올려서 찍으면 글자가 잘 보인다.
+  - 데이터: 아래 표의 표시가 모두 보이게 한다.
+    · APP-124 로그인 실패 원인 조사 — app, hotfix, 산출물 3
+    · APP-120 환불 가능 기간 정책 — app, feature, 하위 2, 산출물 있음
+    · APP-125·APP-126 — APP-120의 child. 카드에 "↳ APP-120"이 보인다
+  - 그림 위에 번호를 얹을 필요는 없다. 아래 표가 카드에 보이는 순서대로 설명한다.
+
+<p align="center">
+  <img src=".github/readme/cards.png" alt="보드 카드: task_id, 제목, project, 유형, 상위 이슈, 하위 이슈 수, 산출물 수" width="560">
+</p>
+-->
+
+| 표시 | 뜻 |
+|---|---|
+| `APP-124` | task_id. 이슈 파일 이름(`board/tasks/APP-124.md`)과 브랜치 이름(`hotfix/APP-124`)에도 쓴다 |
+| 제목 | 이슈 제목 |
+| `app` | project. `projects.tsv`에 등록한 이름이다 |
+| `hotfix` | 유형. `hotfix`, `feature`, `refact`, `improvement`, `research` 중 하나이고 색으로 구분한다 |
+| `↳ APP-120` | 상위 이슈 |
+| `하위 2` | 하위 이슈 수 |
+| `산출물 3` | 이 이슈에 연결한 기록 문서 수 |
+
+한 컬럼 안에서는 최근에 시작한 이슈가 위에 온다. 아직 시작하지 않은 이슈는 만든 시각으로 줄을 세운다.
+
+### 이슈 팝업
+
+카드를 누르면 팝업이 열린다.
+
+<!--
+  ② 이슈 팝업 — 이 자리. 이슈 하나에 무엇이 묶이는지 보여 준다. 위 "말로 시키면 된다"의 대화가 끝난 뒤 모습이다
+  - 파일: .github/readme/task-dialog.png
+  - 화면: 보드에서 APP-124 카드를 눌러 연 팝업. 팝업만 잘라서 찍는다(뒤 보드는 빼거나 살짝만).
+  - 데이터: 대화 예시와 맞춘다.
+    · 제목 "로그인 실패 원인 조사", project app, 유형 hotfix, 컬럼 📝 Planning
+    · 산출물 3개: discovery.md(조사), plan-login.md(작업계획), decisions.md(결정)
+    · History를 펼쳐 Backlog → Discovery → Planning 이동이 보이게 한다
+    · 본문은 두세 줄이면 충분하다
+  - 프롬프트 복사 버튼(이동·폐기)이 보이게 둔다. 보드는 읽기만 하고 고치는 일은 에이전트에게 시킨다는 점이 드러난다.
+
+<p align="center">
+  <img src=".github/readme/task-dialog.png" alt="APP-124 이슈 팝업: 조사·계획·결정 기록이 산출물로 연결되어 있다" width="720">
+</p>
+-->
+
+- **머리**: 컬럼·project·유형과 프롬프트 복사 버튼. 버튼은 그 이슈에서 할 수 있는 일(다른 컬럼으로 옮기기, 폐기, 보관, 꺼내기)만 나온다
+- **정보**: 작성자, 담당자, 생성·시작·완료 시각, 서비스 저장소와 브랜치 링크, 이슈 파일
+- **산출물**: 단계마다 남긴 기록. 누르면 보드 안에서 바로 읽는다
+- **아래쪽**: 본문, 하위 이슈와 각 이슈의 컬럼, History(만들고 옮기고 보관한 이력)
+
+새 이슈는 위쪽 "새 이슈 프롬프트" 버튼으로 프롬프트를 만들어 에이전트에게 붙여 넣는다.
+
+### 이슈 파일
+
+카드와 팝업에 보이는 값은 모두 이슈 파일의 프론트매터에서 온다. 필드와 순서는 `wb`가 정해서 쓰므로 손으로 고칠 일은 거의 없다. 필드별 규칙은 [형식 규칙 — 이슈 파일](plugin/references/workbench-format.md#이슈-파일)에 있다.
+
+<details>
+<summary><strong>이슈 파일 예시</strong> (<code>board/tasks/APP-124.md</code>)</summary>
+
+```markdown
+---
+task_id: APP-124
+title: 로그인 실패 원인 조사
+project: app
+type: hotfix
+column: planning
+author: 김개발
+assigned: 김개발
+created: '2026-11-10T00:12:40.512Z'
+started: '2026-11-10T00:30:05.871Z'
+outputs:
+  - kind: 조사
+    path: records/app/APP-124/discovery.md
+    desc: 로그인 실패 현황과 원인 후보
+  - kind: 작업계획
+    path: records/app/APP-124/plan-login.md
+    desc: 잠금 해제 흐름 수정 계획
+  - kind: 결정
+    path: records/app/APP-124/decisions.md
+    desc: agent 결정과 담당자 평가
+history:
+  - type: created
+    date: '2026-11-10T00:12:40.512Z'
+    author: 김개발
+    column: backlog
+  - type: moved
+    date: '2026-11-10T00:30:05.871Z'
+    author: 김개발
+    from: backlog
+    to: discovery
+  - type: moved
+    date: '2026-11-10T02:41:17.209Z'
+    author: 김개발
+    from: discovery
+    to: planning
+---
+
+로그인 실패 문의가 지난주부터 늘었다. 원인을 찾고 고칠 범위를 정한다.
+```
+
+</details>
 
 ## 구조
 

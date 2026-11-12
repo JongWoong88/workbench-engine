@@ -19,13 +19,14 @@
 </p>
 
 <!--
-  ■ README images (3 total. 1 and 2 are required, 3 is optional)
+  ■ README images (4 total. ①②④ are required, ③ is optional)
 
   Image paths (relative to repo root; README.md and README.en.md share the same files)
   - .github/readme/board-light.png     ① full board, light mode (required)
   - .github/readme/board-dark.png      ① full board, dark mode (optional)
   - .github/readme/task-dialog.png     ② issue dialog (required)
   - .github/readme/decisions-view.png  ③ decisions.md opened in the board (optional)
+  - .github/readme/cards.png           ④ card close-up (required)
 
   Capture details (demo data, sizes, what to show) are in the matching comments in README.md.
 
@@ -69,14 +70,6 @@ You: Open the board
 AI:  Running at http://127.0.0.1:47800/
 ```
 
-<!--
-  ② Issue dialog — here, right below the conversation. Shows what the conversation leaves on the board.
-
-<p align="center">
-  <img src=".github/readme/task-dialog.png" alt="APP-124 issue dialog: research, plan, and decision records linked as outputs" width="720">
-</p>
--->
-
 <details>
 <summary><strong>What <code>decisions.md</code> looks like</strong></summary>
 
@@ -109,13 +102,13 @@ AI-DLC (AI-Driven Development Lifecycle) is a way of working where AI leads rese
 
 | Problem | What workbench does |
 |---|---|
-| **Results are trapped in chat.** When the session ends, findings and reasoning are gone | Every stage leaves a record document, linked to the issue as an output. The next session, or a teammate, picks up where it left off |
-| **You can't see what the AI decided on its own.** It quietly makes choices that affect policy, data, or other teams | Only those decisions go into a per-issue `decisions.md`, and the owner evaluates them |
-| **It jumps straight to code** | Pick the stages the work needs from research → proposal → design → plan, with a human checkpoint between stages |
-| **No unit of work, no links.** Someone has to remember that a research doc, a design, a plan, and a branch all belong together | The issue `board/tasks/{task_id}.md`, the record folder `records/{project}/{task_id}/`, and the branch `{type}/{task_id}` all share one task_id |
-| **Status is scattered** across service repositories | One docs repo holds it all, and the local board shows work from many service repos on one screen |
-| **Format drifts** between people and sessions | One set of format rules, enforced by `wb lint`, a pre-commit check, and the docs repo's CI |
-| **Nothing improves.** There's no record of how good the agent's judgment was | Evaluations roll up into metrics that drive skill improvements |
+| Results disappear when the chat ends | Every stage leaves a record document, linked to the issue as an output. The next session, or a teammate, picks up where it left off |
+| You can't see what the AI decided on its own | Only those decisions go into a per-issue `decisions.md`, and the owner evaluates them |
+| It jumps straight to code | Pick the stages the work needs from research → proposal → design → plan, with a human checkpoint between stages |
+| Nobody knows which document belongs to which work | The issue `board/tasks/{task_id}.md`, the record folder `records/{project}/{task_id}/`, and the branch `{type}/{task_id}` all share one task_id |
+| There's no single view of overall status | One docs repo holds it all, and the local board shows work from many service repos on one screen |
+| Everyone writes in a different format | One set of format rules, enforced by `wb lint`, a pre-commit check, and the docs repo's CI |
+| The agent never gets better | Evaluations roll up into metrics that drive skill improvements |
 
 ### How it compares
 
@@ -156,6 +149,113 @@ flowchart LR
 - Not every issue goes through every stage. A copy fix goes straight to Planning
 - Skills that change the board act only when a human asks. Asking for `orchestrate` includes moving that issue's columns
 - When a skill finishes, it commits and pushes only the files it changed to the docs repo's default branch. Others see it on their next fetch (every 30 seconds by default)
+
+## Reading the board
+
+The board only reads and displays the issue files in the docs repo. You can't edit anything on it. To move a column or create an issue, copy the prompt the board generates and paste it to the agent.
+
+### Columns
+
+| State | Columns | Meaning |
+|---|---|---|
+| Waiting | 📋 Backlog, 🧊 On Hold | Not started yet, or paused |
+| Active | 🔍 Discovery, 🤝 Proposal, 📐 Design, 📝 Planning, 🏃 In Progress | The stage currently in progress. The start time is stamped on first entry |
+| Closed | ✅ Done, 🗑️ Dropped | Finished or abandoned. The completion time is stamped on entry, and the issue's record folder is frozen |
+
+Pick the "진행 현황" (in progress) view at the top to see only Backlog through In Progress. Archived issues appear only when "보관 이슈 보기" (show archived) is on.
+
+### Cards
+
+<!--
+  ④ Card close-up — here. Large enough to read every label on a card.
+  See the matching comment in README.md for capture details.
+
+<p align="center">
+  <img src=".github/readme/cards.png" alt="Board cards: task_id, title, project, type, parent issue, child count, output count" width="560">
+</p>
+-->
+
+| Label | Meaning |
+|---|---|
+| `APP-124` | task_id. Also the issue file name (`board/tasks/APP-124.md`) and part of the branch name (`hotfix/APP-124`) |
+| Title | Issue title |
+| `app` | Project, as registered in `projects.tsv` |
+| `hotfix` | Type: one of `hotfix`, `feature`, `refact`, `improvement`, `research`, color-coded |
+| `↳ APP-120` | Parent issue |
+| `하위 2` | Number of child issues |
+| `산출물 3` | Number of linked record documents (outputs) |
+
+Within a column, the most recently started issue is on top. Issues not started yet are ordered by creation time.
+
+### Issue dialog
+
+Click a card to open its dialog.
+
+<!--
+  ② Issue dialog — here. Shows everything tied to one issue: the state after the conversation in "See it in action".
+  See the matching comment in README.md for capture details.
+
+<p align="center">
+  <img src=".github/readme/task-dialog.png" alt="APP-124 issue dialog: research, plan, and decision records linked as outputs" width="720">
+</p>
+-->
+
+- **Header**: column, project, type, and prompt copy buttons. Only the actions available for that issue appear (move to another column, drop, archive, restore)
+- **Details**: author, assignee, created/started/completed times, service repo and branch links, the issue file
+- **Outputs**: records left at each stage. Click to read them right in the board
+- **Below**: body, child issues with their columns, and History (created, moved, archived)
+
+To create a new issue, use the "새 이슈 프롬프트" (new issue prompt) button at the top and paste the prompt to the agent.
+
+### Issue file
+
+Everything on cards and in the dialog comes from the issue file's frontmatter. `wb` controls the fields and their order, so you rarely edit it by hand. Field rules are in [format rules — issue file](plugin/references/workbench-format.md#이슈-파일) (Korean).
+
+<details>
+<summary><strong>Example issue file</strong> (<code>board/tasks/APP-124.md</code>)</summary>
+
+```markdown
+---
+task_id: APP-124
+title: Investigate login failures
+project: app
+type: hotfix
+column: planning
+author: kim
+assigned: kim
+created: '2026-11-10T00:12:40.512Z'
+started: '2026-11-10T00:30:05.871Z'
+outputs:
+  - kind: research
+    path: records/app/APP-124/discovery.md
+    desc: Login failure status and suspected causes
+  - kind: plan
+    path: records/app/APP-124/plan-login.md
+    desc: Plan to fix the account unlock flow
+  - kind: decisions
+    path: records/app/APP-124/decisions.md
+    desc: Agent decisions and owner evaluations
+history:
+  - type: created
+    date: '2026-11-10T00:12:40.512Z'
+    author: kim
+    column: backlog
+  - type: moved
+    date: '2026-11-10T00:30:05.871Z'
+    author: kim
+    from: backlog
+    to: discovery
+  - type: moved
+    date: '2026-11-10T02:41:17.209Z'
+    author: kim
+    from: discovery
+    to: planning
+---
+
+Login failure reports have increased since last week. Find the cause and scope the fix.
+```
+
+</details>
 
 ## Architecture
 
