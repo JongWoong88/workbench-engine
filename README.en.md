@@ -44,13 +44,6 @@
 
 As you hand more work to agents, the bottleneck is no longer how fast code gets written. It's **how much a human can actually review**. workbench groups agent work into issues, leaves a record at every stage, and pulls out only the decisions a human should have made. Everything is Markdown in a git repository your team owns (the docs repo), so agents read and write a plain clone and humans follow progress on a local board.
 
-```text
-→ results live in git, not in chat history
-→ agents don't quietly make the calls that belong to humans
-→ the process scales to the size of the work
-→ format is enforced by checks, not by human attention
-```
-
 ## See it in action
 
 You talk. The agent handles the `wb` commands and file formats.
