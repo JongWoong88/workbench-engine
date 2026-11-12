@@ -1,6 +1,6 @@
 # workbench 플러그인 사용 안내
 
-작업 이슈(칸반 보드)와 기록 문서를 팀의 git 저장소 하나에 두고, Claude Code 에이전트와 사람이 같은 clone을 보며 일하게 하는 플러그인이다. 왜 필요한지와 전체 워크플로는 [프로젝트 소개](https://github.com/JongWoong88/workbench-engine#왜-필요한가)에 있다. 이 문서는 설치하고 구성하고 쓰는 법이다.
+작업 이슈(칸반 보드)와 기록 문서를 팀의 git 저장소 하나에 두고, Claude Code 에이전트와 사람이 같은 clone을 보며 일하게 하는 플러그인이다. 왜 필요한지와 전체 워크플로는 [프로젝트 소개](https://github.com/JongWoong88/workbench-engine#만든-이유)에 있다. 이 문서는 설치하고 구성하고 쓰는 법이다.
 
 형식 규칙의 정본은 [references/workbench-format.md](references/workbench-format.md), 스킬이 따르는 이용 규칙은 [references/workbench-rules.md](references/workbench-rules.md)다.
 
