@@ -1,6 +1,6 @@
 <h1 align="center">workbench</h1>
 
-<p align="center"><strong>Agents write the research, design, and plan. You review the decisions on a board.</strong></p>
+<p align="center"><strong>An agent work management tool for practicing AI-DLC as a team</strong></p>
 <p align="center">A Claude Code plugin that keeps board issues and work records as Markdown in your team's git repository</p>
 
 <p align="center">
@@ -18,32 +18,120 @@
   <a href="README.md">한국어</a>
 </p>
 
-<!--
-  ■ README images (4 total. ①②④ are required, ③ is optional)
-
-  Image paths (relative to repo root; README.md and README.en.md share the same files)
-  - .github/readme/board-light.png     ① full board, light mode (required)
-  - .github/readme/board-dark.png      ① full board, dark mode (optional)
-  - .github/readme/task-dialog.png     ② issue dialog (required)
-  - .github/readme/decisions-view.png  ③ decisions.md opened in the board (optional)
-  - .github/readme/cards.png           ④ card close-up (required)
-
-  Capture details (demo data, sizes, what to show) are in the matching comments in README.md.
-
-  ① Full board — here, at the top. Shows what the tool is at first glance.
-  If you only have the light-mode capture, delete the <source> line.
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/readme/board-dark.png">
     <img src=".github/readme/board-light.png" alt="workbench board: a kanban of issues from several projects across stage columns">
   </picture>
 </p>
--->
 
 ---
 
-As you hand more work to agents, the bottleneck is no longer how fast code gets written. It's **how much a human can actually review**. workbench groups agent work into issues, leaves a record at every stage, and pulls out only the decisions a human should have made. Everything is Markdown in a git repository your team owns (the docs repo), so agents read and write a plain clone and humans follow progress on a local board.
+workbench is a Claude Code plugin for achieving AI-DLC (AI-Driven Development Lifecycle). It groups agent work into issues, leaves outputs at every stage, and keeps issues and outputs as Markdown in your team's git repository (the docs repo).
+
+## Goals
+
+AI-DLC is a way of working where AI leads research, proposals, design, and planning, and humans verify and approve at each important decision. To support it, workbench aims for the following.
+
+1. Improve agents step by step through a feedback loop
+2. Monitor agent work at a glance
+3. Standardize work quality with an established workflow
+4. Unify output formats to speed up human review, one of the biggest bottlenecks in AI-DLC
+5. Use the storage agents handle best: the local file system and git
+
+## Where existing approaches fall short
+
+Working the AI-DLC way soon surfaces a set of problems.
+
+| Problem | Solution |
+|---|---|
+| Knowledge and history are lost when the chat ends | Every stage leaves a record document, linked to the issue. The next session, or a teammate, picks up where it left off |
+| Decisions the AI made on its own are hard to track | Only those decisions go into a per-issue `decisions.md`, and the owner evaluates them |
+| Implementation starts without enough context | Go through the stages the work needs from research → proposal → design → plan, with a human check at each stage |
+| There's no single view of work status | All projects' work is collected in one docs repo and shown on one board |
+| Work and its outputs aren't connected | The issue `board/tasks/{task_id}.md`, the record folder `records/{project}/{task_id}/`, and the branch `{type}/{task_id}` all share one task_id |
+| Output formats are inconsistent | One set of format rules, enforced by `wb lint`, a pre-commit check, and the docs repo's CI |
+| It's unclear how to improve the agent | Owner evaluations roll up into metrics used as evidence for improving agents and skills |
+
+### Compared with other tools
+
+| Tool | What's missing | workbench |
+|---|---|---|
+| Vibe coding | Requirements and reasoning live only in chat history. The next session starts over | Issues and records stay in git |
+| Markdown docs kept in each project | Records survive, but formats vary and they're scattered across projects, so they're hard to see together | A separate docs repo holds issues and records, and one board covers many projects |
+| Issue trackers like Jira or Notion | An external system for the agent (API, MCP, auth). Long technical docs break in rich text and can't be reviewed as diffs. Format can't be enforced by pre-commit checks or CI | The agent `grep`s past research and designs. Records are Markdown and changes are diffs. Lint blocks bad format |
+| Host issue integration (GitHub Issues, etc.) | Tied to that host and its API | A plain git repository. GitLab or GitHub both work |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph PC["Your machine"]
+    CC["Claude Code<br>skills · wb"] -->|read & write| DOC["docs repo clone"]
+    CC -->|branches · code| SVC["project repos"]
+    BOARD["local board<br>127.0.0.1"] -->|fetch & read| DOC
+  end
+  DOC <-->|push · fetch| REMOTE[("team git host<br>GitLab · GitHub")]
+  REMOTE -->|CI: wb lint --all| REMOTE
+```
+
+Each team has one docs repo. This repository holds only the engine; your team's issues and records live in your team's docs repo.
+
+```text
+docs-repo/
+├── board/tasks/APP-123.md          issue: column, author, assignee, outputs, history
+├── records/app/APP-123/            per-issue records
+│   ├── discovery.md
+│   ├── proposal.md
+│   ├── design-*.md
+│   ├── plan-*.md
+│   └── decisions.md                agent decisions and owner evaluations
+├── projects.tsv                    project ↔ task_id key ↔ project repos
+└── workbench.config.json           shared team settings
+```
+
+## What's inside
+
+| Component | Description |
+|---|---|
+| Skills | Create, update, and archive issues; stage records (research, proposal, design, plan); autonomous runs and decision evaluation; three-perspective proposal review; repository documentation; first-time setup. See the [workflow](#workflow) table for which skill maps to which stage |
+| `wb` command | **A command for agents.** Issues task_ids, creates issues and records, links outputs, runs checks, commits and pushes the docs repo, and runs the board. Humans just ask the agent. To use it in your own terminal, [install it separately](plugin/README.md#터미널에서-wb-직접-쓰기) |
+| Local board | Reads the docs repo clone and serves a kanban board on `127.0.0.1`. No server, no auth. If enabled, it starts with your Claude Code session and stops when all sessions end |
+| Checks | Format checks (`wb lint`) run in a pre-commit hook and in the docs repo's CI |
+| Docs repo template | `wb init` creates the folder layout, settings, hooks, and CI files |
+
+The plugin doesn't change how agents behave in work unrelated to workbench. What it does and doesn't do is spelled out in the [user guide](plugin/README.md#이-플러그인이-하는-일과-하지-않는-일).
+
+## Workflow
+
+```mermaid
+flowchart LR
+  B[📋 Backlog] --> D[🔍 Discovery]
+  D --> P[🤝 Proposal]
+  P --> S[📐 Design]
+  S --> L[📝 Planning]
+  B -. skip when small .-> L
+  L -->|child issues| I[🏃 In Progress]
+  I --> X[✅ Done]
+  L -. evaluate .-> E{{Owner evaluation<br>decisions.md}}
+  E -. revised decisions .-> D
+```
+
+| Stage | What happens | Skill | What's left behind |
+|---|---|---|---|
+| Create issue | Put the work on the board. A task_id is issued | `new-task` | `board/tasks/APP-123.md` |
+| 🔍 Discovery | Investigate the current state from code, config, and data; review requirements | `groundwork` | `discovery.md` |
+| 🤝 Proposal | Compare the current approach with alternatives and propose one. Optionally review it separately from business, technical, and UX perspectives | `groundwork`, `proposal-review` | `proposal.md`, review report |
+| 📐 Design | Write policy and technical design, plus decision records (ADRs) | `groundwork` | `design-*.md` |
+| 📝 Planning | Lay out sub-tasks, order, and a test plan | `plan` | `plan-*.md` |
+| Autonomous run | Pick only the stages needed and run through Planning without stopping. Decisions a human should have made are recorded instead of asked. Columns move along with the stages | `orchestrate` | `decisions.md` |
+| Evaluation | The owner marks each decision approved, revised, missed, or excluded. If anything was revised, rerun `orchestrate` to rewrite the outputs | `evaluate-decisions` | Evaluations and metrics |
+| 🏃 In Progress | Once the plan is approved, turn sub-tasks into child issues and develop on the `{type}/{task_id}` branch | `new-task`, `update-task` | Branches, commits |
+| ✅ Done | Move to done. Anything still valid long-term moves into the project repo's living docs. Finished issues get archived | `update-task`, `documentation`, `archive-task` | Living docs |
+
+- Not every issue goes through every stage. A copy fix goes straight to Planning
+- Skills that change the board act only when a human asks. Asking for `orchestrate` includes moving that issue's columns
+- When a skill finishes, it commits and pushes only the files it changed to the docs repo's default branch. Others see it on their next fetch (every 30 seconds by default)
 
 ## See it in action
 
@@ -83,106 +171,19 @@ The agent keeps going without stopping to ask, and collects only the choices a l
 | D-3 | design | Expose refund status to the settlement batch too? | Yes | med | approved |
 ```
 
-<!--
-  ③ (optional) decisions.md opened in the board — here, inside the collapsed example.
-  Keep the code block above even after adding the image, so the example stays readable and copyable.
-
 <p align="center">
   <img src=".github/readme/decisions-view.png" alt="decisions.md opened in the board: decision summary table with owner evaluations" width="720">
 </p>
--->
 
 Evaluations are aggregated with `wb decision-stats` and used as evidence for improving skills and rules. Format reference: [decisions-format.md](plugin/references/decisions-format.md) (Korean)
 
 </details>
 
-## Why workbench
-
-AI-DLC (AI-Driven Development Lifecycle) is a way of working where AI leads research, proposals, design, and planning, and humans verify and approve at decision points. Working this way surfaces a set of problems.
-
-| Problem | What workbench does |
-|---|---|
-| Results disappear when the chat ends | Every stage leaves a record document, linked to the issue as an output. The next session, or a teammate, picks up where it left off |
-| You can't see what the AI decided on its own | Only those decisions go into a per-issue `decisions.md`, and the owner evaluates them |
-| It jumps straight to code | Pick the stages the work needs from research → proposal → design → plan, with a human checkpoint between stages |
-| Nobody knows which document belongs to which work | The issue `board/tasks/{task_id}.md`, the record folder `records/{project}/{task_id}/`, and the branch `{type}/{task_id}` all share one task_id |
-| There's no single view of overall status | One docs repo holds it all, and the local board shows work from many service repos on one screen |
-| Everyone writes in a different format | One set of format rules, enforced by `wb lint`, a pre-commit check, and the docs repo's CI |
-| The agent never gets better | Evaluations roll up into metrics that drive skill improvements |
-
-### How it compares
-
-| Approach | What's missing | workbench |
-|---|---|---|
-| Nothing at all | Requirements and reasoning live only in chat history. The next session re-investigates | Issues and records stay in git |
-| Markdown plans inside the service repo | Records survive, but there's no unit of work, status, or owner, and they're scattered across repos | A separate docs repo holds issues and records, and one board covers many service repos |
-| Issue trackers like Jira or Notion | An external system for the agent (API, MCP, auth). Long technical docs break in rich text and can't be reviewed as diffs. Format can't be enforced by pre-commit checks or CI | The agent `grep`s past research and designs. Records are Markdown and changes are diffs. Lint blocks bad format |
-| Host issue integration (GitHub Issues, etc.) | Tied to that host and its API | A plain git repository. GitLab or GitHub both work |
-
-## Workflow
-
-```mermaid
-flowchart LR
-  B[📋 Backlog] --> D[🔍 Discovery]
-  D --> P[🤝 Proposal]
-  P --> S[📐 Design]
-  S --> L[📝 Planning]
-  B -. skip when small .-> L
-  L -->|child issues| I[🏃 In Progress]
-  I --> X[✅ Done]
-  L -. evaluate .-> E{{Owner evaluation<br>decisions.md}}
-  E -. revised decisions .-> D
-```
-
-| Stage | What happens | Skill | What's left behind |
-|---|---|---|---|
-| Create issue | Put the work on the board. A task_id is issued | `new-task` | `board/tasks/APP-123.md` |
-| 🔍 Discovery | Investigate the current state from code, config, and data; review requirements | `groundwork` | `discovery.md` |
-| 🤝 Proposal | Compare the current approach with alternatives and propose one. Optionally review it separately from business, technical, and UX perspectives | `groundwork`, `proposal-review` | `proposal.md`, review report |
-| 📐 Design | Write policy and technical design, plus decision records (ADRs) | `groundwork` | `design-*.md` |
-| 📝 Planning | Lay out sub-tasks, order, and a test plan | `plan` | `plan-*.md` |
-| Autonomous run | Pick only the stages needed and run through Planning without stopping. Decisions a human should have made are recorded instead of asked. Columns move along with the stages | `orchestrate` | `decisions.md` |
-| Evaluation | The owner marks each decision approved, revised, missed, or excluded. If anything was revised, rerun `orchestrate` to rewrite the outputs | `evaluate-decisions` | Evaluations and metrics |
-| 🏃 In Progress | Once the plan is approved, turn sub-tasks into child issues and develop on the `{type}/{task_id}` branch | `new-task`, `update-task` | Branches, commits |
-| ✅ Done | Move to done. Anything still valid long-term moves into the service repo's living docs. Finished issues get archived | `update-task`, `documentation`, `archive-task` | Repository docs |
-
-- Not every issue goes through every stage. A copy fix goes straight to Planning
-- Skills that change the board act only when a human asks. Asking for `orchestrate` includes moving that issue's columns
-- When a skill finishes, it commits and pushes only the files it changed to the docs repo's default branch. Others see it on their next fetch (every 30 seconds by default)
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph PC["Your machine"]
-    CC["Claude Code<br>skills · wb"] -->|read & write| DOC["docs repo clone"]
-    CC -->|branches · code| SVC["service repos"]
-    BOARD["local board<br>127.0.0.1"] -->|fetch & read| DOC
-  end
-  DOC <-->|push · fetch| REMOTE[("team git host<br>GitLab · GitHub")]
-  REMOTE -->|CI: wb lint --all| REMOTE
-```
-
-Each team has one docs repo. This repository holds only the engine; your team's issues and records live in your team's docs repo.
-
-```text
-docs-repo/
-├── board/tasks/APP-123.md          issue: column, author, assignee, outputs, history
-├── records/app/APP-123/            per-issue records
-│   ├── discovery.md
-│   ├── proposal.md
-│   ├── design-*.md
-│   ├── plan-*.md
-│   └── decisions.md                agent decisions and owner evaluations
-├── projects.tsv                    project ↔ task_id key ↔ service repos
-└── workbench.config.json           shared team settings
-```
-
 ## Quick start
 
 Requirements: Node 22+, git (with credentials that can push to the docs repo), Claude Code
 
-**1. Install.** Agents also work inside service repos, so install at user scope.
+**1. Install.** Agents work across many project repos, so install at user scope.
 
 ```bash
 claude plugin marketplace add JongWoong88/workbench-engine
@@ -210,9 +211,9 @@ The agent follows `/workbench:setup`: it asks for what it needs, shows you the v
 
 Manual setup, config files, the board, example requests per skill, and troubleshooting are in the [user guide](plugin/README.md) (Korean).
 
-## Reading the board
+## Using the board
 
-The board only reads and displays the issue files in the docs repo. You can't edit anything on it. To move a column or create an issue, copy the prompt the board generates and paste it to the agent.
+The board is a read-only view of the issue files in the docs repo. To move a column or create an issue, copy the prompt the board generates and give it to the agent.
 
 ### Columns
 
@@ -226,14 +227,9 @@ Pick the "진행 현황" (in progress) view at the top to see only Backlog throu
 
 ### Cards
 
-<!--
-  ④ Card close-up — here. Large enough to read every label on a card.
-  See the matching comment in README.md for capture details.
-
 <p align="center">
   <img src=".github/readme/cards.png" alt="Board cards: task_id, title, project, type, parent issue, child count, output count" width="560">
 </p>
--->
 
 | Label | Meaning |
 |---|---|
@@ -251,17 +247,12 @@ Within a column, the most recently started issue is on top. Issues not started y
 
 Click a card to open its dialog.
 
-<!--
-  ② Issue dialog — here. Shows everything tied to one issue: the state after the conversation in "See it in action".
-  See the matching comment in README.md for capture details.
-
 <p align="center">
   <img src=".github/readme/task-dialog.png" alt="APP-124 issue dialog: research, plan, and decision records linked as outputs" width="720">
 </p>
--->
 
 - **Header**: column, project, type, and prompt copy buttons. Only the actions available for that issue appear (move to another column, drop, archive, restore)
-- **Details**: author, assignee, created/started/completed times, service repo and branch links, the issue file
+- **Details**: author, assignee, created/started/completed times, project repo and branch links, the issue file
 - **Outputs**: records left at each stage. Click to read them right in the board
 - **Below**: body, child issues with their columns, and History (created, moved, archived)
 
@@ -316,18 +307,6 @@ Login failure reports have increased since last week. Find the cause and scope t
 ```
 
 </details>
-
-## What's inside
-
-| Component | Description |
-|---|---|
-| Skills | Create, update, and archive issues; stage records (research, proposal, design, plan); autonomous runs and decision evaluation; three-perspective proposal review; repository documentation; first-time setup. See the [workflow](#workflow) table for which skill maps to which stage |
-| `wb` command | **A command for agents.** Issues task_ids, creates issues and records, links outputs, runs checks, commits and pushes the docs repo, and runs the board. Humans just ask the agent. To use it in your own terminal, [install it separately](plugin/README.md#터미널에서-wb-직접-쓰기) |
-| Local board | Reads the docs repo clone and serves a kanban board on `127.0.0.1`. No server, no auth. If enabled, it starts with your Claude Code session and stops when all sessions end |
-| Checks | Format checks (`wb lint`) run in a pre-commit hook and in the docs repo's CI |
-| Docs repo template | `wb init` creates the folder layout, settings, hooks, and CI files |
-
-The plugin doesn't change how agents behave in other projects. What it does and doesn't do is spelled out in the [user guide](plugin/README.md#이-플러그인이-하는-일과-하지-않는-일).
 
 ## Documentation
 
