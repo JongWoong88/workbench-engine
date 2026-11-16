@@ -198,7 +198,7 @@ common	CMN	-	-
 | `/workbench:archive-task` | "끝난 이슈 APP-120 보관해 줘" |
 | `/workbench:groundwork` | "APP-123 현황 조사해서 정리해 줘", "제안서 써 줘", "설계 초안 써 줘" |
 | `/workbench:plan` | "APP-123 작업 계획 세워 줘" |
-| `/workbench:orchestrate` | "APP-123 계획까지 자동으로 진행해 줘" — 필요한 단계만 골라 Planning까지 멈추지 않고 진행하고, 결정은 이슈 폴더 `decisions.md`에 남긴다 |
+| `/workbench:orchestrate` | "APP-123 계획까지 자동으로 진행해 줘" — 필요한 단계만 골라 Planning까지 진행하고, 결정은 이슈 폴더 `decisions.md`에 남긴다. 제안 단계를 거치면 담당자가 결정을 평가할 때까지 멈춘다 |
 | `/workbench:evaluate-decisions` | "APP-123 결정 평가할게. D-2 수정, 나머지 승인" |
 | `/workbench:proposal-review` | "이 제안서 3관점으로 검토해 줘" |
 | `/workbench:documentation` | "이 저장소 정책 문서 갱신해 줘", "끝난 이슈 기록을 저장소 문서로 옮겨 줘" |

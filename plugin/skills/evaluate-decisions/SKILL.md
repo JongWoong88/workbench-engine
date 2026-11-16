@@ -1,6 +1,6 @@
 ---
 name: evaluate-decisions
-description: workbench 이슈 폴더 decisions.md에 담당자 평가(승인·수정·누락·제외, 영향도 수정)를 기록하고 지표를 보여 준 뒤 main에 커밋·push한다. 담당자가 대화로 평가하면 대신 적고, 담당자가 파일을 직접 고쳤으면 형식 확인과 집계만 하고 마감한다. "CMN-20 결정 평가할게", "D-3은 수정, D-5는 승인", "평가 마감해", "결정 기록 평가 끝났어" 같은 요청에 쓴다. 결정을 기록하는 일은 단계 스킬과 orchestrate, 평가를 반영한 재작성은 orchestrate.
+description: workbench 이슈 폴더 decisions.md에 담당자 평가(승인·수정·누락·제외, 영향도 수정)를 기록하고 지표를 보여 준 뒤 main에 커밋·push한다. 담당자가 대화로 평가하면 대신 적고, 담당자가 파일을 직접 고쳤으면 형식 확인과 집계만 하고 마감한다. "CMN-20 결정 평가할게", "D-3은 수정, D-5는 승인", "평가 마감해", "결정 기록 평가 끝났어" 같은 요청에 쓴다. orchestrate가 Proposal 뒤에 멈춰 기다리는 평가도 이 스킬로 한다. 결정을 기록하는 일은 단계 스킬과 orchestrate, 평가를 반영한 재작성과 이어 가기는 orchestrate.
 argument-hint: "{task_id} [평가 내용 — 예: D-2 수정: …, D-4 승인, 누락: …] [마감]"
 allowed-tools: Bash(wb *), Bash(git *), Read, Edit, Grep, Glob
 ---
@@ -51,6 +51,6 @@ allowed-tools: Bash(wb *), Bash(git *), Read, Edit, Grep, Glob
 
 - `wb decision-stats --task <task_id>` 결과(평가 완료일 때). 평가 전이면 남은 빈칸 수
 - 반영 기록 중 `반영 예정` 항목
-- 다음 할 일:
-  - 반영되지 않은 수정·누락·산출물 지적이 있으면 `/workbench:orchestrate <task_id>`를 다시 실행해 산출물을 재작성한다
-  - 계획이 승인됐으면 child 이슈를 만들지 담당자에게 묻는다(만드는 것은 `new-task`)
+- 다음 할 일: `decisions.md`의 `진행:` 줄로 고른다
+  - `진행:`에 `planning`이 없다(proposal 뒤 평가 관문에서 멈춘 이슈): 평가 빈칸이 남았으면 마저 평가해야 이어 갈 수 있다고 알린다. 빈칸이 없으면 `/workbench:orchestrate <task_id>`를 다시 실행해 설계·계획으로 이어 가라고 안내한다. 수정·누락이 있으면 그 실행이 제안서부터 고쳐 쓴다
+  - `진행:`에 `planning`이 있다: 반영되지 않은 수정·누락·산출물 지적이 있으면 `/workbench:orchestrate <task_id>`를 다시 실행해 산출물을 재작성한다. 계획이 승인됐으면 child 이슈를 만들지 담당자에게 묻는다(만드는 것은 `new-task`)

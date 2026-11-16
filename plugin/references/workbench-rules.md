@@ -16,6 +16,7 @@ workbench 플러그인의 모든 스킬이 먼저 읽는 공통 규칙이다. �
 2. **명시적 지시가 있을 때만 고친다**: 사용자가 지시한 범위 안에서 `new-task`·`update-task`·`archive-task` 스킬로 고친다.
    - **`orchestrate` 실행 지시는 그 이슈의 전진 이동 지시를 겸한다.** `update-task`의 "명시적 지시"와 별개 경로다. 범위는 그 이슈 하나의 컬럼 이동뿐이다. 다른 이슈, 속성 변경, 종료 컬럼 이동은 포함하지 않는다.
      - 컬럼은 `discovery` → `proposal` → `design` → `planning` 순서로 앞으로만 간다. 이슈 규모에 따라 쓰지 않는 단계는 건너뛰고, 그 단계의 컬럼은 거치지 않는다(예: `backlog` → `discovery` → `planning`). `planning`은 건너뛰지 않는다. 시작 컬럼이 `backlog`·`on-hold`이면 첫 이동은 쓰기로 한 첫 단계다.
+     - `proposal`을 쓰면 그 컬럼에서 멈춘다. 담당자가 `decisions.md`의 결정을 평가하고 `orchestrate`를 다시 실행해야 다음 컬럼으로 옮긴다.
      - 이동은 `update-task`와 같은 절차로 한다. `wb sync begin --files <이슈 파일> <decisions.md>` → `wb move-task` → `wb lint --files …` → `wb sync commit --files …`. 이동 하나가 커밋 하나다.
    - **child 이슈는 계획서가 담당자 평가에서 승인된 뒤 만든다.** 사용자 지시로 `new-task`가 만든다. 평가에서 계획이 바뀌면 child를 되돌려야 하기 때문이다.
 3. **예외 — 산출물 링크(의무)**: 이슈와 관련된 기록 문서를 만들었으면 지시가 없어도 **반드시** 그 이슈의 `outputs`에 링크를 단다.

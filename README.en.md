@@ -108,7 +108,8 @@ The plugin doesn't change how agents behave in work unrelated to workbench. What
 flowchart LR
   B[📋 Backlog] --> D[🔍 Discovery]
   D --> P[🤝 Proposal]
-  P --> S[📐 Design]
+  P -->|after evaluation| S[📐 Design]
+  D -. no decisions for a human .-> S
   S --> L[📝 Planning]
   B -. skip when small .-> L
   L -->|child issues| I[🏃 In Progress]
@@ -124,12 +125,12 @@ flowchart LR
 | 🤝 Proposal | Compare the current approach with alternatives and propose one. Optionally review it separately from business, technical, and UX perspectives | `groundwork`, `proposal-review` | `proposal.md`, review report |
 | 📐 Design | Write policy and technical design, plus decision records (ADRs) | `groundwork` | `design-*.md` |
 | 📝 Planning | Lay out sub-tasks, order, and a test plan | `plan` | `plan-*.md` |
-| Autonomous run | Pick only the stages needed and run through Planning without stopping. Decisions a human should have made are recorded instead of asked. Columns move along with the stages | `orchestrate` | `decisions.md` |
-| Evaluation | The owner marks each decision approved, revised, missed, or excluded. If anything was revised, rerun `orchestrate` to rewrite the outputs | `evaluate-decisions` | Evaluations and metrics |
+| Autonomous run | Pick only the stages needed and run through Planning. Decisions a human should have made are recorded instead of asked. Columns move along with the stages. If Proposal is used, the run stops there; once the owner evaluates the decisions, run it again to continue to Design and Planning | `orchestrate` | `decisions.md` |
+| Evaluation | The owner marks each decision approved, revised, missed, or excluded. Rerun `orchestrate` afterwards to continue from where it stopped; if anything was revised, it first rewrites the affected documents | `evaluate-decisions` | Evaluations and metrics |
 | 🏃 In Progress | Once the plan is approved, turn sub-tasks into child issues and develop on the `{type}/{task_id}` branch | `new-task`, `update-task` | Branches, commits |
 | ✅ Done | Move to done. Anything still valid long-term moves into the project repo's living docs. Finished issues get archived | `update-task`, `documentation`, `archive-task` | Living docs |
 
-- Not every issue goes through every stage. A copy fix goes straight to Planning
+- Not every issue goes through every stage. A copy fix goes straight to Planning, and Proposal is skipped when there's nothing for a human to decide
 - Skills that change the board act only when a human asks. Asking for `orchestrate` includes moving that issue's columns
 - When a skill finishes, it commits and pushes only the files it changed to the docs repo's default branch. Others see it on their next fetch (every 30 seconds by default)
 
@@ -161,7 +162,7 @@ AI:  Running at http://127.0.0.1:47800/
 <details>
 <summary><strong>What <code>decisions.md</code> looks like</strong></summary>
 
-The agent keeps going without stopping to ask, and collects only the choices a lead would have said "you should have asked me about." The owner reads just this table and marks each one approved, revised, missed, or excluded.
+The agent doesn't stop to ask in the middle of a stage. Instead it collects the choices a lead would have said "you should have asked me about." An issue that goes through Proposal doesn't move on to Design until those decisions are evaluated. The owner reads just this table and marks each one approved, revised, missed, or excluded.
 
 ```markdown
 | D | Stage | Decision | Chosen | Impact | Evaluation |
