@@ -15,7 +15,7 @@ workbench 엔진 저장소다. 작업 보드 이슈와 기록 문서를 git 문�
 | `plugin/cli/` | `wb` 명령 소스. 게시할 때 `bin/wb.mjs` 한 파일로 묶는다 | 묶음으로 |
 | `plugin/bin/` | `wb` 진입점(`wb`, `wb.cmd`, `wb.mjs`) | 들어간다 |
 | `site/` | 보드 화면 원본. `npm run board:build`가 `plugin/board-ui/`로 묶는다 | 묶음으로 |
-| `bin/` | 개발 도구: `build-site`, `build-package`, `check-public`, `replay-*` | 들어가지 않는다 |
+| `bin/` | 개발 도구: `build-site`, `build-package`, `replay-*` | 들어가지 않는다 |
 | `test/` | `npm test` | 들어가지 않는다 |
 | `.claude-plugin/marketplace.json` | 마켓플레이스. 플러그인은 npm 패키지를 받는다 | — |
 | `.github/workflows/` | 시험(`ci.yml`), 게시(`release.yml`) | — |
@@ -70,4 +70,3 @@ node plugin/bin/wb.mjs --help
 ## 게시
 
 - 게시는 `release.yml`만 한다. npm 신뢰 게시(OIDC)를 쓰고 저장 토큰을 두지 않는다. 개인 계정 토큰으로 게시하지 않는다.
-- 공개하기 전에 금지어 검사를 돌린다: `node bin/check-public.mjs --deny <금지어 파일> --untracked [--commits]`. 금지어 목록은 이 저장소에 넣지 않는다.
