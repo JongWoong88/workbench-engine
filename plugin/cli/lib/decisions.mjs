@@ -5,7 +5,8 @@ import { parseFrontmatter } from './workbench.mjs';
 export const STAGES = ['discovery', 'proposal', 'design', 'planning'];
 // '하'는 2026-10-30 이전 기록을 읽기 위해서만 받는다. 새 기록은 상·중만 쓴다
 export const IMPACTS = ['상', '중', '하'];
-export const EVALUATIONS = ['승인', '수정', '누락', '제외(불필요)', '제외(판정 불가)'];
+// '사용자 결정'은 수동 모드에서 사용자가 답한 결정이다. agent의 선택이 아니라 지표에서 뺀다
+export const EVALUATIONS = ['승인', '수정', '누락', '제외(불필요)', '제외(판정 불가)', '사용자 결정'];
 export const SUMMARY_COLUMNS = ['D', '단계', '결정할 것', '채택안', '영향도', '평가', '하네스'];
 // 2026-10-30 이전 기록의 마지막 열 이름. 읽기만 한다
 const LEGACY_COLUMNS = [...SUMMARY_COLUMNS.slice(0, -1), '프레임'];
@@ -99,11 +100,12 @@ function tally(items) {
   const approved = count('승인');
   const unneeded = count('제외(불필요)');
   const undecidable = count('제외(판정 불가)');
-  const recorded = items.length - missed;
+  const userDecided = count('사용자 결정');
+  const recorded = items.length - missed - userDecided;
   const decisions = approved + revised;
   const ratio = (a, b) => (b ? a / b : 0);
   return {
-    recorded, missed, revised, approved, unneeded, undecidable,
+    recorded, missed, revised, approved, unneeded, undecidable, userDecided,
     missRate: ratio(missed, decisions + missed),
     reviseRate: ratio(revised, decisions),
     overRate: ratio(unneeded, recorded - undecidable),

@@ -2,11 +2,12 @@
 // 이슈 폴더의 decisions.md(agent 결정과 담당자 평가)를 모아 지표를 내거나 형식을 검사한다.
 // 형식: plugin/references/decisions-format.md
 //   집계: 평가 완료 문서만. 영향도는 담당자 값(`중→상`의 `상`)
-//     기록 = agent가 기록한 항목(누락이 아닌 것), 결정 = 승인 + 수정
+//     기록 = agent가 기록하고 고른 항목(누락·사용자 결정이 아닌 것), 결정 = 승인 + 수정
 //     누락률 = 누락 ÷ (결정 + 누락)          — 올렸어야 할 결정을 놓친 비율
 //     수정률 = 수정 ÷ 결정                    — 채택안이 틀린 비율
 //     과잉률 = 제외(불필요) ÷ (기록 − 제외(판정 불가)) — 올릴 필요가 없는 선택을 올린 비율
 //     제외(판정 불가)는 세 비율 모두에서 뺀다
+//     사용자 결정(수동 모드에서 사용자가 답한 결정)은 agent의 선택이 아니라 기록과 세 비율 모두에서 빼고 개수만 보인다
 //   --check: 평가 상태와 관계없이 형식 대응을 검사한다. 오류가 있으면 종료 코드 1
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,7 +23,7 @@ const USAGE = `사용법: wb decision-stats [--task <task_id> | --project <proje
 
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
 const line = (s) => [
-  `기록 ${s.recorded} (승인 ${s.approved} · 수정 ${s.revised} · 제외(불필요) ${s.unneeded} · 제외(판정 불가) ${s.undecidable}) · 누락 ${s.missed}`,
+  `기록 ${s.recorded} (승인 ${s.approved} · 수정 ${s.revised} · 제외(불필요) ${s.unneeded} · 제외(판정 불가) ${s.undecidable}) · 누락 ${s.missed} · 사용자 결정 ${s.userDecided}`,
   `누락률 ${pct(s.missRate)} · 수정률 ${pct(s.reviseRate)} · 과잉률 ${pct(s.overRate)} · 상 누락 ${s.highMissed} · 상 수정 ${s.highRevised} · 재작성 단계 ${s.redoneStages}`,
 ].join('\n  ');
 

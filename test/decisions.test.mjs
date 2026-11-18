@@ -110,6 +110,20 @@ test('stats: 제외(불필요)는 과잉률로, 제외(판정 불가)는 모든 
   assert.deepEqual(checkDecisions(p, { docs: [] }), []);
 });
 
+test('stats: 사용자 결정은 기록과 모든 비율에서 빼고 개수만 센다', () => {
+  const text = EVALUATED
+    .replace('| D-5 | planning |', '| D-6 | discovery | 대상 채널에 앱을 넣는가 | 넣는다 | 상 | 사용자 결정 | aaaaaaa |\n| D-5 | planning |')
+    .replace('## 상세\n', '## 상세\n\n### D-6 대상 채널에 앱을 넣는가\n\n- agent 권고: 웹만\n- 평가: 사용자 결정 · 사용자 · 2026-11-02\n');
+  const p = parseDecisions(text);
+  assert.deepEqual(p.problems, []);
+  const s = decisionStats(p);
+  const base = decisionStats(parseDecisions(EVALUATED));
+  assert.equal(s.userDecided, 1);
+  assert.equal(base.userDecided, 0);
+  for (const k of ['recorded', 'approved', 'missRate', 'reviseRate', 'overRate']) assert.equal(s[k], base[k], k);
+  assert.deepEqual(checkDecisions(p, { docs: [] }), []);
+});
+
 test('stats: 하네스 버전별로 나눈다', () => {
   const s = decisionStats(parseDecisions(EVALUATED), { byHarness: true });
   assert.deepEqual(Object.keys(s.harnesses).sort(), ['aaaaaaa', 'bbbbbbb']);
