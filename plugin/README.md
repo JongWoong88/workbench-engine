@@ -19,10 +19,11 @@
 
 | 한다 | 하지 않는다 |
 |---|---|
-| 보드 이슈 생성·수정·보관 스킬, 기록 문서(조사·제안·설계·작업 계획·검토) 스킬, 산출물 링크와 커밋·push | 도구 실행을 막거나 바꾸는 훅, 출력 스타일, MCP 서버, 기본 에이전트 교체 — 다른 프로젝트에서의 에이전트 동작은 바꾸지 않는다 |
+| 보드 이슈 생성·수정·보관 스킬, 기록 문서(조사·제안·설계·작업 계획·검토) 스킬, 산출물 링크와 커밋·push | 도구 실행을 막거나 바꾸는 훅(예외: 켠 PC에서 workbench 단계 스킬 진입만 막는 [단계 진입 가드](#단계-진입-가드-실험), 기본 off), 출력 스타일, MCP 서버, 기본 에이전트 교체 — 다른 프로젝트에서의 에이전트 동작은 바꾸지 않는다 |
 | 명령 진입점 `wb` (허용된 workbench 명령만 실행) | 사용자 설정 변경, 전역 패키지 설치(요청할 때만 에이전트가 한다) |
-| 세션 시작 훅([`hooks/session-context.mjs`](hooks/session-context.mjs)) — `wb`와 규칙 문서의 위치, 문서 저장소 위치, task_id 접두사를 세션 컨텍스트에 싣는다. 문서 저장소가 정해지지 않았으면 구성하라고 알린다. [보드 자동 실행](#세션과-함께-자동으로-띄우기)을 켰으면 보드를 띄운다 | 규칙 본문을 싣는 것 — 안내와 경로만 싣는다 |
-| 세션 종료 훅([`hooks/session-end.mjs`](hooks/session-end.mjs)) — 보드 자동 실행을 켰을 때만 끝난 세션의 기록을 지운다 | 그 밖의 세션 종료 처리 |
+| 세션 시작 훅([`hooks/session-context.mjs`](hooks/session-context.mjs)) — `wb`와 규칙 문서의 위치, 문서 저장소 위치, task_id 접두사를 세션 컨텍스트에 싣는다. 문서 저장소가 정해지지 않았으면 구성하라고 알린다. [보드 자동 실행](#세션과-함께-자동으로-띄우기)을 켰으면 보드를 띄우고, [단계 진입 가드](#단계-진입-가드-실험)를 켰으면 안내 한 줄을 더한다 | 규칙 본문을 싣는 것 — 안내와 경로만 싣는다 |
+| 세션 종료 훅([`hooks/session-end.mjs`](hooks/session-end.mjs)) — 끝난 세션의 보드 자동 실행 기록과 단계 진입 가드의 진입 표시를 지운다 | 그 밖의 세션 종료 처리 |
+| 단계 진입 가드 훅([`hooks/stage-entry-guard.mjs`](hooks/stage-entry-guard.mjs)) — Skill 호출과 `/workbench:orchestrate`·`groundwork`·`plan` 입력 때 실행된다. 꺼져 있으면 설정만 읽고 바로 끝난다 | 다른 스킬·도구 호출을 막는 것 |
 
 ## 준비물
 
@@ -153,6 +154,7 @@ common	CMN	-	-
 | 저장소 하나만 다른 폴더에 둠 | `wb config set repo-path <projects.tsv의 논리 경로> <폴더>` | `repoPaths` (논리 경로 → 폴더) |
 | 문서 저장소의 git 원격 이름이 `origin`이 아님 | `wb config set remote <이름>` | `remote` |
 | 세션이 시작되면 보드를 띄우고 세션이 모두 끝나면 끄기([자세히](#세션과-함께-자동으로-띄우기)) | `wb config set board-autostart on` | `boardAutostart` (기본 `false`) |
+| 이슈의 조사·제안·설계·계획 진입을 `orchestrate`로 한정하기([자세히](#단계-진입-가드-실험)) | `wb config set stage-entry-guard on` | `stageEntryGuard` (기본 `false`) |
 | 지금 값과 출처, 이 PC에 없는 서비스 저장소 | `wb config get` | — |
 | 값 지우기 | `wb config unset <키>` | — |
 
@@ -187,6 +189,17 @@ common	CMN	-	-
 - 사람이나 에이전트가 따로 띄운 보드(`wb board --open`)는 세션이 끝나도 끄지 않는다. 자동으로 뜬 보드도 `wb board --stop`으로 바로 끌 수 있다
 - 세션의 Claude Code 프로세스를 찾지 못하는 환경이면 종료 훅이 기록을 지울 때 꺼진다. 종료 훅도 돌지 못하면 그 기록은 24시간 뒤에 정리된다
 - 끄기: `wb config set board-autostart off`
+
+## 단계 진입 가드 (실험)
+
+`wb config set stage-entry-guard on`(또는 에이전트에게 "단계 진입 가드 켜 줘")을 하면, 이 PC의 세션에서 이슈의 조사·제안·설계·계획 문서를 쓸 때 `/workbench:orchestrate`를 거치게 한다. `orchestrate`는 단계마다 이슈를 그 컬럼으로 옮기고 결정을 `decisions.md`에 남긴다. 기본은 꺼져 있다.
+
+- 막는 것: 그 세션에서 `orchestrate`를 거치지 않은 이슈의 `workbench:groundwork`·`workbench:plan` 진입. 에이전트가 부르면 에이전트에게 `orchestrate`로 이어 가라는 사유가, 사람이 `/workbench:groundwork …`를 입력하면 사람에게 안내가 보인다
+- 막지 않는 것: task_id가 없는 기록(이슈 없는 기록), 보드에 없는 task_id, 컬럼이 `in-progress` 이후인 이슈(구현 중·후 기록), 그 밖의 모든 스킬·도구
+- `orchestrate`를 이슈 제목으로 부르면 그 세션의 모든 이슈가 열린다(훅이 제목을 task_id로 풀지 못한다)
+- 기록: `~/.workbench/stage-entry/`의 세션별 진입 표시(세션이 끝나면 지운다)와 `events.jsonl`(판정 기록, 인자 원문은 남기지 않는다)
+- 꺼져 있어도 Skill 호출마다 훅 프로세스가 짧게 뜬다. 설정 파일만 읽고 끝난다
+- 끄기: `wb config set stage-entry-guard off`
 
 ## 쓰는 법
 

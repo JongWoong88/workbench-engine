@@ -30,8 +30,8 @@ model: opus
 
 | 요청 | 담당 |
 |---|---|
-| 제안서·설계 문서를 **쓰는** 일 | `/workbench:groundwork` |
-| 작업 계획 수립 | `/workbench:plan` |
+| 제안서·설계 문서를 **쓰는** 일 | `/workbench:groundwork`(이슈가 있고 단계 진입 가드가 켜져 있으면 `/workbench:orchestrate`) |
+| 작업 계획 수립 | `/workbench:plan`(이슈가 있고 단계 진입 가드가 켜져 있으면 `/workbench:orchestrate`) |
 | 코드 변경 리뷰 | `/code-review` |
 | 저장소 현황 문서 작성 | `/workbench:documentation` |
 

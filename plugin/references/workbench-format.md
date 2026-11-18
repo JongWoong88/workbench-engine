@@ -194,6 +194,7 @@ updated: 2026-09-28
 | `wb config set repo-path <논리 경로> <폴더>` | 저장소 하나를 다른 폴더에 둔 경우 |
 | `wb config set remote <이름>` | 문서 저장소 clone의 git 원격 이름(기본 `origin`) |
 | `wb config set board-autostart on\|off` | Claude Code 세션이 시작되면 보드를 백그라운드로 띄우고(새로 띄울 때만 브라우저를 연다), 이 PC의 세션이 모두 끝나면 끈다. 비대화형 실행에는 띄우지 않는다. 기본 `off`. 세션 기록은 `~/.workbench/board-sessions/` |
+| `wb config set stage-entry-guard on\|off` | 단계 진입 가드. 켜면 이 PC의 세션에서 `orchestrate`를 거치지 않은 이슈의 `groundwork`·`plan` 진입(모델 호출과 `/` 직접 입력)을 막고 `orchestrate`로 안내한다. task_id가 없거나 `in-progress` 이후인 이슈는 막지 않는다. 기본 `off`. 진입 표시와 측정 기록은 `~/.workbench/stage-entry/` |
 | `wb config get` | 지금 값과 출처 |
 
 ## 도구 (`wb`)
@@ -212,7 +213,7 @@ updated: 2026-09-28
 | `wb lint [--changed \| --staged \| --files … \| --all]` | 규칙 검사([lint 검사 항목](#lint-검사-항목)). 오류가 있으면 종료 코드 1 |
 | `wb sync begin [--files …]` / `wb sync commit --files … --message …` | 이슈·기록 변경을 기본 브랜치에 커밋·push. 같은 PC의 여러 에이전트가 동시에 불러도 잠금으로 하나씩 돈다 |
 | `wb absorb-candidates [--task \| --project] [--since]` | 종료 이슈의 기록과 대상 저장소의 문서 루트 목록 |
-| `wb decision-stats [--task \| --project] [--by harness] [--check]` | 이슈 폴더 `decisions.md`의 담당자 평가 지표와 형식 검사 |
+| `wb decision-stats [--task \| --project] [--by harness] [--check]` | 이슈 폴더 `decisions.md`의 담당자 평가 지표와 형식 검사. 문서마다 평가가 빈 항목(`open`: `id`·`stage`·`impact`)도 낸다(평가 전 문서 포함) |
 | `wb config …` | PC별 설정 |
 | `wb board [--port] [--open] [--worktree] [--no-fetch] [--background]`, `wb board --stop` | 로컬 보드. 문서 저장소 clone의 원격 기본 브랜치를 읽어 `127.0.0.1`에 띄운다. 터미널에서는 그 자리에서 돌고(Ctrl+C로 끝), 터미널이 아니면(에이전트) 백그라운드로 띄우고 바로 돌아온다. 이미 떠 있으면 그 주소를 알린다. `--stop`이 끈다. 떠 있는 보드는 `~/.workbench/board.json`에 적는다. `--auto`는 세션 시작 훅(`board-autostart`)이 쓴다 |
 | `wb init <폴더> --host gitlab\|github [--web] [--repo] [--branch] [--set-data-root]` | 새 문서 저장소 템플릿(보드·기록 폴더, 대응표 머리, 공유 설정, hook, CI 파일) |

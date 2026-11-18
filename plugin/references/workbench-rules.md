@@ -15,6 +15,7 @@ workbench 플러그인의 모든 스킬이 먼저 읽는 공통 규칙이다. �
 1. **기본은 조회만**: 이슈를 읽어 작업 맥락을 파악할 수 있지만, `board/` 아래 파일은 스스로 고치지 않는다. 이슈 생성·삭제, 컬럼 이동, 보관, 속성 변경, `board.yml` 변경이 모두 여기에 든다.
 2. **명시적 지시가 있을 때만 고친다**: 사용자가 지시한 범위 안에서 `new-task`·`update-task`·`archive-task` 스킬로 고친다.
    - **`orchestrate` 실행 지시는 그 이슈의 전진 이동 지시를 겸한다.** `update-task`의 "명시적 지시"와 별개 경로다. 범위는 그 이슈 하나의 컬럼 이동뿐이다. 다른 이슈, 속성 변경, 종료 컬럼 이동은 포함하지 않는다.
+     - 단계 진입 가드(PC별 설정 `stage-entry-guard`)가 단계 스킬을 막고 `orchestrate`로 진행하라고 안내해 실행한 경우도 실행 지시로 본다. 사용자가 이 PC에서 가드를 켠 것이 단계 진행을 `orchestrate`에 맡긴다는 지시이기 때문이다. 이동 범위는 같다.
      - 컬럼은 `discovery` → `proposal` → `design` → `planning` 순서로 앞으로만 간다. 이슈 규모에 따라 쓰지 않는 단계는 건너뛰고, 그 단계의 컬럼은 거치지 않는다(예: `backlog` → `discovery` → `planning`). `planning`은 건너뛰지 않는다. 시작 컬럼이 `backlog`·`on-hold`이면 첫 이동은 쓰기로 한 첫 단계다.
      - `proposal`을 쓰면 그 컬럼에서 멈춘다. 담당자가 `decisions.md`의 결정을 평가하고 `orchestrate`를 다시 실행해야 다음 컬럼으로 옮긴다.
      - 이동은 `update-task`와 같은 절차로 한다. `wb sync begin --files <이슈 파일> <decisions.md>` → `wb move-task` → `wb lint --files …` → `wb sync commit --files …`. 이동 하나가 커밋 하나다.

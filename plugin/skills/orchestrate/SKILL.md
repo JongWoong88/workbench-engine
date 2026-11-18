@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: workbench 보드 이슈 하나를 Planning(작업계획)까지 자율로 진행한다. 이슈 규모에 맞게 Discovery·Proposal·Design 중 필요한 단계만 고르고 작업계획은 반드시 쓴다. 단계 스킬(groundwork·plan)을 자율 모드로 차례로 실행하고, 단계 안에서는 묻지 않고 결정을 이슈 폴더 decisions.md에 남기며, 컬럼을 단계에 맞춰 옮기고, 마지막에 담당자 평가를 요청한다. 사람이 정할 결정이 있어 Proposal을 쓰면 그 뒤에 멈추고, 담당자 평가를 받은 뒤 다시 실행하면 이어 간다. 담당자가 평가에서 수정한 결정이 있으면 다시 실행해 산출물을 재작성한다. "이 이슈 계획까지 진행해", "자동으로 진행해", "orchestrate" 같은 명시적 지시에만 쓴다. 단계 하나만 쓰려면 groundwork·plan, 평가 기록은 evaluate-decisions.
+description: workbench 보드 이슈 하나를 Planning(작업계획)까지 자율로 진행한다. 이슈 규모에 맞게 Discovery·Proposal·Design 중 필요한 단계만 고르고 작업계획은 반드시 쓴다. 단계 스킬(groundwork·plan)을 자율 모드로 차례로 실행하고, 단계 안에서는 묻지 않고 결정을 이슈 폴더 decisions.md에 남기며, 컬럼을 단계에 맞춰 옮기고, 마지막에 담당자 평가를 요청한다. 사람이 정할 결정이 있어 Proposal을 쓰면 그 뒤에 멈추고, 담당자 평가를 받은 뒤 다시 실행하면 이어 간다. 담당자가 평가에서 수정한 결정이 있으면 다시 실행해 산출물을 재작성한다. "이 이슈 계획까지 진행해", "자동으로 진행해", "orchestrate" 같은 명시적 지시에만 쓴다. 단계 진입 가드(PC별 설정 stage-entry-guard)가 단계 스킬을 막고 orchestrate로 진행하라고 안내했을 때도 사용자에게 다시 묻지 않고 쓴다. 단계 하나만 쓰려면 groundwork·plan, 평가 기록은 evaluate-decisions.
 argument-hint: "{task_id 또는 이슈 제목} [요구사항·추가 프롬프트]"
 allowed-tools: Skill, Agent, Read, Grep, Glob, Write, Edit, Bash
 model: opus
@@ -57,6 +57,7 @@ model: opus
 | design | 정책·규칙을 새로 정하거나, 구조·데이터 모델·연동 규격이 바뀐다 | 기존 구조 안의 국소 수정이다. 바뀌는 규칙을 계획서의 작업 설명으로 충분히 적을 수 있다 |
 | planning | 항상 | — |
 
+- **discovery를 마친 뒤 평가가 빈 discovery `상` 결정이 하나라도 있으면 proposal을 건너뛰지 않는다(반드시).** 판단으로 정하지 않고 도구 출력으로 정한다: `wb decision-stats --task <task_id> --json`에서 이 이슈 항목(`pending` 또는 `issues`)의 `open` 중 `stage`가 `discovery`이고 `impact`가 `상`인 항목을 센다. 1 이상이면 proposal을 쓴다. 요구사항 해석처럼 사람만 답할 수 있는 결정을 설계·계획을 쌓기 전에 평가 관문에서 확인받는 경로다.
 - proposal을 쓰면 그 뒤 [평가 관문](#평가-관문)에서 멈춘다. 사람이 정할 결정을 설계·계획을 쌓기 전에 확인받기 위해서다. 그래서 proposal은 꼭 필요할 때만 쓴다.
 - 앞 단계 결과로 판단이 바뀌면 다시 고른다. 예: 건너뛰려던 proposal을, discovery에서 정책 선택지가 드러나 쓰게 된다. 평가 관문에서는 담당자가 고친 결정을 보고 design을 쓸지 다시 정한다.
 - 건너뛴 단계에서 내렸을 결정은 다음에 쓰는 단계 문서가 맡는다. 예: proposal을 건너뛰고 planning에서 해법을 고르면, 그 선택이 기록 기준에 해당할 때 planning 단계 결정으로 `decisions.md`에 남긴다.

@@ -94,3 +94,20 @@ test('hooks.json: 단계 진입 가드를 Skill PreToolUse와 UserPromptExpansio
     }
   }
 });
+
+test('orchestrate: proposal 필수 조건의 판정 명령이 decision-stats 출력 필드와 같다', () => {
+  const body = fs.readFileSync(path.join(PLUGIN, 'skills', 'orchestrate', 'SKILL.md'), 'utf8');
+  assert.match(body, /wb decision-stats --task <task_id> --json/);
+  for (const field of ['`pending`', '`issues`', '`open`', '`stage`', '`impact`']) assert.ok(body.includes(field), field);
+  const src = fs.readFileSync(path.join(PLUGIN, 'cli', 'lib', 'decisions.mjs'), 'utf8');
+  assert.match(src, /map\(\(\{ id, stage, impact \}\) => \(\{ id, stage, impact \}\)\)/, 'open 항목의 필드 이름');
+  const cmd = fs.readFileSync(path.join(PLUGIN, 'cli', 'decision-stats.mjs'), 'utf8');
+  assert.match(cmd, /open: openItems/);
+});
+
+test('스킬·README: 단계 진입 가드를 안내한다', () => {
+  const read = (...p) => fs.readFileSync(path.join(PLUGIN, ...p), 'utf8');
+  assert.match(read('skills', 'orchestrate', 'SKILL.md').split('\n')[2], /stage-entry-guard/, 'description');
+  assert.match(read('references', 'workbench-rules.md'), /단계 진입 가드/);
+  assert.match(read('README.md'), /## 단계 진입 가드 \(실험\)/);
+});
