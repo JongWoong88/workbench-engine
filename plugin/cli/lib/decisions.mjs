@@ -116,6 +116,27 @@ function tally(items) {
 }
 
 /**
+ * 평가가 빈 항목. 평가 상태와 관계없이 낸다. orchestrate가 proposal을 건너뛸 수 있는지 판정할 때 쓴다.
+ * 순서는 요약 표 순서다. 영향도는 담당자 값(`중→상`의 `상`)이다.
+ * @param {ReturnType<typeof parseDecisions>} p
+ * @returns {{id:string, stage:string, impact:string|null}[]}
+ */
+export function openItems(p) {
+  return p.items.filter((x) => !x.evaluation).map(({ id, stage, impact }) => ({ id, stage, impact }));
+}
+
+/** 평가 빈칸을 단계·영향도별로 센 한 줄. 예: `discovery 상 1 · design 중 2`. 빈칸이 없으면 '' */
+export function openSummary(open) {
+  const order = (x) => STAGES.indexOf(x.stage) * IMPACTS.length + IMPACTS.indexOf(x.impact);
+  const counts = new Map();
+  for (const x of [...open].sort((a, b) => order(a) - order(b))) {
+    const key = `${x.stage} ${x.impact ?? '?'}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts].map(([k, n]) => `${k} ${n}`).join(' · ');
+}
+
+/**
  * 지표(정의의 정본은 bin/decision-stats.mjs 머리 주석). 영향도는 담당자 값을 쓴다.
  * @param {ReturnType<typeof parseDecisions>|ReturnType<typeof parseDecisions>[]} parsed 하나 또는 여럿
  */

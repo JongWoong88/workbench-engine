@@ -8,12 +8,14 @@
 //     과잉률 = 제외(불필요) ÷ (기록 − 제외(판정 불가)) — 올릴 필요가 없는 선택을 올린 비율
 //     제외(판정 불가)는 세 비율 모두에서 뺀다
 //     사용자 결정(수동 모드에서 사용자가 답한 결정)은 agent의 선택이 아니라 기록과 세 비율 모두에서 빼고 개수만 보인다
+//   평가 빈칸(open): 평가 상태와 관계없이 문서마다 평가가 빈 항목(id·단계·영향도)을 낸다. 집계에는 영향이 없다
+//     orchestrate가 discovery 뒤 proposal을 건너뛸 수 있는지 이 값으로 판정한다
 //   --check: 평가 상태와 관계없이 형식 대응을 검사한다. 오류가 있으면 종료 코드 1
 import fs from 'node:fs';
 import path from 'node:path';
 import { run, args, usage, Rejection, EXIT } from './lib/report.mjs';
 import { RECORDS, listFiles, read, rel, posix } from './lib/workbench.mjs';
-import { parseDecisions, decisionStats, checkDecisions } from './lib/decisions.mjs';
+import { parseDecisions, decisionStats, checkDecisions, openItems, openSummary } from './lib/decisions.mjs';
 
 const USAGE = `사용법: wb decision-stats [--task <task_id> | --project <project>] [--by harness] [--check]
   --task     그 이슈의 decisions.md만
@@ -64,14 +66,16 @@ run(async () => {
   const byHarness = Boolean(values.by);
   const evaluated = docs.filter((d) => d.parsed.status?.state === '평가 완료');
   const pending = docs.filter((d) => d.parsed.status?.state !== '평가 완료');
-  const issues = evaluated.map((d) => ({ task: d.task, project: d.project, file: d.file, ...decisionStats(d.parsed, { byHarness }), warnings: d.parsed.problems }));
+  const issues = evaluated.map((d) => ({ task: d.task, project: d.project, file: d.file, ...decisionStats(d.parsed, { byHarness }), open: openItems(d.parsed), warnings: d.parsed.problems }));
   const total = decisionStats(evaluated.map((d) => d.parsed), { byHarness });
+  const pendingOut = pending.map((d) => ({ task: d.task, file: d.file, open: openItems(d.parsed) }));
 
   const text = [
     ...issues.map((i) => `${i.task} (${i.file})\n  ${line(i)}${i.warnings.length ? `\n  경고 ${i.warnings.length}건 — --check로 확인한다` : ''}`),
     evaluated.length ? `합계 (${evaluated.length}건)\n  ${line(total)}` : '평가를 마친 decisions.md가 없다',
     ...(byHarness ? Object.entries(total.harnesses).map(([h, s]) => `하네스 ${h}\n  ${line(s)}`) : []),
     ...(pending.length ? [`평가 전이라 제외: ${pending.map((d) => d.task).join(', ')}`] : []),
+    ...pendingOut.filter((p) => p.open.length).map((p) => `  ${p.task} 평가 빈칸: ${openSummary(p.open)}`),
   ].join('\n');
-  return { data: { issues, pending: pending.map((d) => ({ task: d.task, file: d.file })), total }, text };
+  return { data: { issues, pending: pendingOut, total }, text };
 }, USAGE);

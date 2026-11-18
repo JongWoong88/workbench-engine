@@ -187,6 +187,29 @@ test('decision-stats: 평가 완료 문서만 집계하고, 평가 전 문서는
   assert.match(text.out, /평가 전.*KEYA-3/s);
 });
 
+test('decision-stats: 평가가 빈 항목을 open으로 낸다 — 평가 전 문서는 pending에, 평가 완료 문서는 issues에', () => {
+  fx.write('records/alpha/KEYA-4/decisions.md', PENDING
+    .replace('Pending', 'Open')
+    .replace(/task_id: KEYA-3/, 'task_id: KEYA-4')
+    .replace('| D-1 | discovery | 범위를 넓히는가 | 넓힌다 | 중 |  | ccccccc |', [
+      '| D-1 | discovery | 범위를 넓히는가 | 넓힌다 | 중 |  | ccccccc |',
+      '| D-2 | discovery | 해석을 무엇으로 하는가 | A | 상 |  | ccccccc |',
+      '| D-3 | design | 구조를 바꾸는가 | 바꾼다 | 상 | 승인 | ccccccc |',
+      '| D-4 | discovery | 사용자가 정한 것 | B | 상 | 사용자 결정 | ccccccc |',
+    ].join('\n'))
+    .replace('- 근거: x\n', '- 근거: x\n\n### D-2 해석을 무엇으로 하는가\n\n### D-3 구조를 바꾸는가\n\n### D-4 사용자가 정한 것\n'));
+  const r = cli(fx, 'decision-stats', [], { json: true });
+  assert.equal(r.code, 0, r.err);
+  const open = Object.fromEntries(r.json.pending.map((p) => [p.task, p.open]));
+  assert.deepEqual(open['KEYA-3'], [{ id: 'D-1', stage: 'discovery', impact: '중' }]);
+  assert.deepEqual(open['KEYA-4'], [{ id: 'D-1', stage: 'discovery', impact: '중' }, { id: 'D-2', stage: 'discovery', impact: '상' }]);
+  assert.deepEqual(r.json.issues.find((i) => i.task === 'KEYA-1').open, []);
+  assert.equal(r.json.total.recorded, 4, '집계는 평가 완료 문서만 그대로');
+  const text = cli(fx, 'decision-stats', []);
+  assert.match(text.out, /KEYA-4 평가 빈칸: discovery 상 1 · discovery 중 1/);
+  assert.doesNotMatch(text.out, /KEYA-1 평가 빈칸/);
+});
+
 test('decision-stats: --task로 좁히고 --by harness로 나눈다', () => {
   const r = cli(fx, 'decision-stats', ['--task', 'KEYA-1', '--by', 'harness'], { json: true });
   assert.equal(r.code, 0, r.err);
