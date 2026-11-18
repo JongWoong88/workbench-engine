@@ -70,3 +70,27 @@ test('세션 안내: 문서 저장소가 정해지지 않았으면 설정 방법
 test('세션 안내: 환경변수 WORKBENCH_ROOT가 설정보다 우선한다', () => {
   assert.ok(hook({ WORKBENCH_ROOT: fx.wb }).includes(fx.wb.split(path.sep).join('/')));
 });
+
+test('세션 안내: 단계 진입 가드가 켜져 있을 때만 안내 줄을 더하고, 꺼져 있으면 출력이 그대로다', () => {
+  const cfgDir = path.join(fx.ws, '.wb-config');
+  fs.mkdirSync(cfgDir);
+  fs.writeFileSync(path.join(cfgDir, 'config.json'), JSON.stringify({ dataRoot: fx.wb }));
+  const off = hook({ WORKBENCH_ROOT: undefined });
+  assert.doesNotMatch(off, /단계 진입 실험/);
+  fs.writeFileSync(path.join(cfgDir, 'config.json'), JSON.stringify({ dataRoot: fx.wb, stageEntryGuard: true }));
+  const on = hook({ WORKBENCH_ROOT: undefined });
+  assert.match(on, /단계 진입 실험 중/);
+  assert.equal(on.split('\n').filter((l) => !/단계 진입 실험/.test(l)).join('\n'), off);
+});
+
+test('hooks.json: 단계 진입 가드를 Skill PreToolUse와 UserPromptExpansion에 등록하고, 스크립트가 있다', () => {
+  const h = JSON.parse(fs.readFileSync(path.join(PLUGIN, 'hooks', 'hooks.json'), 'utf8')).hooks;
+  assert.equal(h.PreToolUse[0].matcher, 'Skill');
+  assert.match(h.UserPromptExpansion[0].matcher, /workbench:groundwork/);
+  for (const ev of ['SessionStart', 'SessionEnd', 'PreToolUse', 'UserPromptExpansion']) {
+    for (const x of h[ev].flatMap((g) => g.hooks)) {
+      const file = x.args[0].replace('${CLAUDE_PLUGIN_ROOT}', PLUGIN);
+      assert.ok(fs.existsSync(file), file);
+    }
+  }
+});

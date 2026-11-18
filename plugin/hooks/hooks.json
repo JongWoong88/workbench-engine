@@ -6,7 +6,9 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session-context.mjs"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/session-context.mjs"
+            ],
             "timeout": 10
           }
         ]
@@ -18,7 +20,39 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/session-end.mjs"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/session-end.mjs"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/stage-entry-guard.mjs"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "workbench:orchestrate|workbench:groundwork|workbench:plan",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/stage-entry-guard.mjs"
+            ],
             "timeout": 5
           }
         ]

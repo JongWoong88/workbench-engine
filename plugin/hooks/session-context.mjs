@@ -8,11 +8,11 @@
 //   PC별 설정 boardAutostart가 켜져 있으면 이 세션을 보드 세션으로 기록하고(board-sessions.mjs) 보드를 백그라운드로 띄운다.
 //   보드를 새로 띄울 때만 브라우저가 열린다. 비대화형 실행(claude -p)에는 띄우지 않는다. 훅은 기다리지 않고 바로 끝난다.
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { registerSession, findClaudeProcess, isHeadless } from './board-sessions.mjs';
+import { userConfig, dataRoot, taskIdKeys } from './lib/env.mjs';
 
 const toPosix = (p) => p.split(path.sep).join('/');
 
@@ -38,6 +38,10 @@ try {
     '- 이슈 발급·수정·보관과 기록 작성 절차는 `workbench:*` 스킬에 있다.',
   );
 
+  if (userConfig().stageEntryGuard === true) {
+    lines.push('- 단계 진입 실험 중(PC별 설정 stage-entry-guard): 이슈의 조사·제안·설계·계획 문서는 `/workbench:orchestrate <task_id>`로 진행한다. 단계 스킬(`workbench:groundwork`·`workbench:plan`)을 바로 부르면 가드가 막는다.');
+  }
+
   if (data && userConfig().boardAutostart === true) {
     try {
       const line = autostartBoard(pluginRoot);
@@ -51,15 +55,6 @@ try {
 }
 process.exit(0);
 
-/** PC별 설정. 못 읽으면 빈 설정 */
-function userConfig() {
-  try {
-    const dir = process.env.WORKBENCH_CONFIG_DIR || path.join(os.homedir(), '.workbench');
-    return JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8')) ?? {};
-  } catch {
-    return {};
-  }
-}
 
 /** 이 세션을 기록하고 보드를 백그라운드로 띄운다(이미 떠 있으면 wb가 아무것도 하지 않는다). 안내 한 줄, 띄우지 않았으면 null */
 function autostartBoard(pluginRoot) {
@@ -72,22 +67,3 @@ function autostartBoard(pluginRoot) {
   return '- 로컬 보드를 자동으로 띄운다(PC별 설정 board-autostart). 처음 띄울 때만 브라우저가 열리고, 이 PC의 Claude Code 세션이 모두 끝나면 꺼진다. 주소는 `wb board`, 지금 끄려면 `wb board --stop`.';
 }
 
-/** 문서 저장소 위치. board/ 폴더가 있어야 문서 저장소로 본다. 못 찾으면 null */
-function dataRoot() {
-  const root = process.env.WORKBENCH_ROOT || userConfig().dataRoot || null;
-  return root && fs.existsSync(path.join(root, 'board')) ? path.resolve(root) : null;
-}
-
-// projects.tsv의 key 열(주석 줄 제외)을 중복 없이 모은다. 읽지 못하면 빈 목록
-function taskIdKeys(file) {
-  try {
-    const keys = fs.readFileSync(file, 'utf8')
-      .split(/\r?\n/)
-      .filter((line) => line.trim() && !line.startsWith('#'))
-      .map((line) => line.split('\t')[1]?.trim())
-      .filter((key) => key && key !== '-');
-    return [...new Set(keys)];
-  } catch {
-    return [];
-  }
-}

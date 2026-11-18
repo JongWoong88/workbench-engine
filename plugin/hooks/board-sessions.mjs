@@ -5,15 +5,15 @@
 //   pid를 찾지 못한 세션은 종료 훅이 지울 때까지, 그래도 남으면 STALE_MS 동안 살아 있는 것으로 본다.
 //   Node 내장 모듈만 쓴다(설치물 규칙). 어떤 함수도 예외로 세션을 막지 않게 부르는 쪽이 try로 감싼다.
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { configDir, safeName } from './lib/env.mjs';
 
 export const STALE_MS = 24 * 60 * 60 * 1000;
 
-export const configDir = () => path.resolve(process.env.WORKBENCH_CONFIG_DIR || path.join(os.homedir(), '.workbench'));
+export { configDir };
 export const sessionsDir = (dir = configDir()) => path.join(dir, 'board-sessions');
-const fileOf = (dir, sessionId) => path.join(sessionsDir(dir), `${String(sessionId).replace(/[^A-Za-z0-9_-]/g, '_') || 'unknown'}.json`);
+const fileOf = (dir, sessionId) => path.join(sessionsDir(dir), `${safeName(sessionId)}.json`);
 
 export function pidAlive(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
