@@ -185,7 +185,7 @@ updated: 2026-09-28
 
 ### PC별 설정 `~/.workbench/config.json`
 
-`wb config`로 읽고 쓴다. 손으로 고쳐도 된다 — JSON 키는 `dataRoot`, `workspaceRoot`, `repoPaths`(논리 경로 → 폴더), `remote`, `boardAutostart`다.
+`wb config`로 읽고 쓴다. 손으로 고쳐도 된다 — JSON 키는 `dataRoot`, `workspaceRoot`, `repoPaths`(논리 경로 → 폴더), `remote`, `boardAutostart`, `stageEntryGuard`다.
 
 | 명령 | 뜻 |
 |---|---|

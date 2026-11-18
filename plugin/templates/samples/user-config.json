@@ -5,5 +5,6 @@
     "group/web-admin": "/home/me/other/web-admin"
   },
   "remote": "origin",
-  "boardAutostart": false
+  "boardAutostart": false,
+  "stageEntryGuard": false
 }
