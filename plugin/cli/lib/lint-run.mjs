@@ -39,7 +39,8 @@ export function lintRun({ mode, positionals = [], quiet = false }) {
   const staged = mode === 'staged'
     ? targets.filter((t) => /^board\/tasks\/[^/]+\.md$/.test(t)).map((t) => ({ rel: t, head: show(`HEAD:${t}`), index: show(`:${t}`) }))
     : [];
-  const all = runRules({ staged });
+  // 링크 위반은 링크가 있는 문서에만 붙으므로 대상 문서의 링크만 검사한다. 숨긴 건수에는 대상 밖 링크 위반이 들어가지 않는다
+  const all = runRules({ staged, linkScope: targetSet ? hit : null });
   const shown = [];
   const hidden = { error: 0, warn: 0 };
   for (const f of all) {
@@ -64,7 +65,7 @@ export function lintRun({ mode, positionals = [], quiet = false }) {
 
   const scope = targetSet ? `${mode} — 대상 파일 ${targets.length}개` : 'all — 전체';
   const head = `lint (${scope}): 오류 ${errors}건, 경고 ${warns}건` +
-    (hidden.error + hidden.warn ? ` / 대상 밖 기존 위반 오류 ${hidden.error}건·경고 ${hidden.warn}건은 숨김 (전체 보기: wb lint --all)` : '');
+    (hidden.error + hidden.warn ? ` / 대상 밖 기존 위반(링크 제외) 오류 ${hidden.error}건·경고 ${hidden.warn}건은 숨김 (전체 보기: wb lint --all)` : '');
   const body = visible
     .sort((a, b) => (a.severity === b.severity ? a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0) : a.severity === 'error' ? -1 : 1))
     .map((f) => [

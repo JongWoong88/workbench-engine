@@ -71,8 +71,11 @@ export function applySince(findings, formatVersion, since = RULE_SINCE) {
  * @param {object} [opts]
  * @param {{rel: string, head: string|null, index: string|null}[]} [opts.staged]
  *   스테이징된 이슈 파일의 HEAD·인덱스 내용. lint --staged(pre-commit)만 넘긴다 — TASK-MOVE-UNRECORDED
+ * @param {((rel: string) => boolean)|null} [opts.linkScope]
+ *   링크를 검사할 문서를 고른다(workbench 기준 경로). 없으면 모든 문서. 링크 위반은 그 링크가 있는 문서에만
+ *   붙으므로(related 없음) 대상 문서만 보는 lint(--files·--staged)에서 나머지 문서를 검사할 이유가 없다
  */
-export function runRules({ staged = [] } = {}) {
+export function runRules({ staged = [], linkScope = null } = {}) {
   const findings = [];
   const add = (f) => findings.push({ severity: 'error', owner: 'agent', related: [], ...f, fix: [].concat(f.fix) });
   const projects = loadProjects();
@@ -304,8 +307,13 @@ export function runRules({ staged = [] } = {}) {
         : [`대상 제목(${rel(target)}:${h.line})에 <a id="${id}"></a>를 넣고 '#${id}'로 링크한다`] });
   };
 
+  // 지금은 없는 workbench 안 대상. 이력 확인(LINK-REMOVED/LINK-BROKEN)은 루프 뒤에 git을 몰아 부른다(removedAt)
+  const missingInside = [];
+  let recordFiles = null;
+  const recordsList = () => (recordFiles ??= listFiles(RECORDS));
   for (const [abs, base] of linkFiles) {
     const r = rel(abs);
+    if (linkScope && !linkScope(r)) continue;
     const text = read(abs);
     const shas = baseShas(parseFrontmatter(text).data);
     for (const { href, line } of collectLinks(text)) {
@@ -324,19 +332,10 @@ export function runRules({ staged = [] } = {}) {
       if (exists(target)) { checkAnchor(r, line, href, target); continue; }
       const inside = target.startsWith(WB + path.sep);
       const hints = [];
-      const sameName = inside ? listFiles(RECORDS).filter((f) => path.basename(f) === path.basename(target)) : [];
+      const sameName = inside ? recordsList().filter((f) => path.basename(f) === path.basename(target)) : [];
       if (sameName.length === 1) hints.push(`같은 이름의 파일이 ${rel(sameName[0])}에 있다. 옮겨진 것이면 그 경로로 고친다 (이 파일 기준: ${posix(path.relative(base, sameName[0]))})`);
       if (inside) {
-        // 기록은 특정 시점의 문서다. 그 파일의 이력 중 어느 커밋에라도 대상이 있었으면 깨진 링크가 아니라 지워진 대상이다.
-        // 마지막 커밋만 보면 대상을 지운 뒤 기록을 조금만 고쳐도(체크리스트 등) 오류가 된다
-        const targetRel = posix(path.relative(WB, target));
-        const history = git(['log', '--format=%H', '--', r]).stdout.split('\n').filter(Boolean);
-        const seenAt = history.find((c) => git(['cat-file', '-e', `${c}:${targetRel}`]).ok);
-        if (seenAt) {
-          add({ rule: 'LINK-REMOVED', severity: 'warn', file: r, line, message: `링크 대상이 지금은 없다(이 파일의 커밋 ${seenAt.slice(0, 7)}에는 있었다): ${href}`, fix: ['기록이면 그대로 둔다(작성 시점을 가리킨다). 상시 문서·이슈 본문이면 옮겨진 경로로 고치거나 링크를 지운다'] });
-          continue;
-        }
-        add({ rule: 'LINK-BROKEN', file: r, line, message: `링크 대상이 없다: ${href}`, fix: [...hints, hints.length ? '' : '대상 파일이 옮겨졌거나 이름이 바뀌었는지 확인해 경로를 고친다. 지워진 문서라면 링크를 지운다'].filter(Boolean) });
+        missingInside.push({ r, line, href, hints, targetRel: posix(path.relative(WB, target)) });
       } else {
         // 저장소가 이 PC에 없으면 확인할 수 없다
         // 링크는 논리 경로다. 이 PC의 실제 폴더로 바꿔 확인한다
@@ -357,6 +356,17 @@ export function runRules({ staged = [] } = {}) {
           ] });
       }
     }
+  }
+  // 기록은 특정 시점의 문서다. 그 파일의 이력 중 어느 커밋에라도 대상이 있었으면 깨진 링크가 아니라 지워진 대상이다.
+  // 마지막 커밋만 보면 대상을 지운 뒤 기록을 조금만 고쳐도(체크리스트 등) 오류가 된다
+  const seenAtOf = removedAt(missingInside);
+  for (const m of missingInside) {
+    const seenAt = seenAtOf(m);
+    if (seenAt) {
+      add({ rule: 'LINK-REMOVED', severity: 'warn', file: m.r, line: m.line, message: `링크 대상이 지금은 없다(이 파일의 커밋 ${seenAt.slice(0, 7)}에는 있었다): ${m.href}`, fix: ['기록이면 그대로 둔다(작성 시점을 가리킨다). 상시 문서·이슈 본문이면 옮겨진 경로로 고치거나 링크를 지운다'] });
+      continue;
+    }
+    add({ rule: 'LINK-BROKEN', file: m.r, line: m.line, message: `링크 대상이 없다: ${m.href}`, fix: [...m.hints, m.hints.length ? '' : '대상 파일이 옮겨졌거나 이름이 바뀌었는지 확인해 경로를 고친다. 지워진 문서라면 링크를 지운다'].filter(Boolean) });
   }
 
   // ── 줄바꿈 ─────────────────────────────────────────────
@@ -392,6 +402,29 @@ export function runRules({ staged = [] } = {}) {
 
   // 호환 규칙 K-3: 문서 저장소의 형식 버전보다 나중에 생긴 오류 규칙은 경고로 낸다
   return applySince(findings, parseSharedConfig(exists(sharedFile) ? read(sharedFile) : '{}').config.formatVersion);
+}
+
+/**
+ * 지금은 없는 링크 대상마다, 링크가 있는 문서의 이력 중 대상이 있던 가장 최근 커밋을 찾는 함수를 돌려준다(없으면 undefined).
+ * git 프로세스는 문서마다 `log` 한 번, 전체에 `cat-file --batch-check` 한 번만 띄운다.
+ * 링크·커밋마다 프로세스를 띄우면 엔진 소스를 옮긴 문서 저장소처럼 지워진 대상이 많을 때 lint 한 번에 수백 개가 뜬다
+ * (Windows에서 개당 약 60ms)
+ * @param {{r: string, targetRel: string}[]} items
+ */
+function removedAt(items) {
+  if (!items.length) return () => undefined;
+  const historyOf = new Map();
+  for (const { r } of items) {
+    if (!historyOf.has(r)) historyOf.set(r, git(['log', '--format=%H', '--', r]).stdout.split('\n').filter(Boolean));
+  }
+  const specs = [...new Set(items.flatMap(({ r, targetRel }) => historyOf.get(r).map((c) => `${c}:${targetRel}`)))];
+  const present = new Set();
+  if (specs.length) {
+    // 입력 한 줄에 출력 한 줄. 있으면 `<sha> <type> <size>`, 없으면 `<입력> missing`(또는 ambiguous)
+    const out = git(['cat-file', '--batch-check'], WB, { input: `${specs.join('\n')}\n` }).stdout.split('\n');
+    specs.forEach((s, i) => { if (/^[0-9a-f]{40,64} \w+ \d+$/.test(out[i] ?? '')) present.add(s); });
+  }
+  return ({ r, targetRel }) => historyOf.get(r).find((c) => present.has(`${c}:${targetRel}`));
 }
 
 /** 기록 프론트매터 base → {저장소 이름: 커밋}. `main@abc` (repos가 하나) 또는 `{web: main@abc, …}` */

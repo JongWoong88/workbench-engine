@@ -2,6 +2,8 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { makeWorkspace, cli, boardTask } from './fixture.mjs';
 
 let fx;
@@ -130,6 +132,37 @@ test('LINK-REMOVED: 기록의 마지막 커밋에 있던 workbench 파일이 지
   fx.write('records/alpha/KEYA-2/discovery.md', `${fx.read('records/alpha/KEYA-2/discovery.md')}- [x] 체크\n`);
   sh('commit', '-qam', 'edit record after removal');
   assert.deepEqual(ofRule(lintAll(), 'LINK-REMOVED').map((f) => f.severity), ['warn']);
+});
+
+test('LINK-REMOVED: 지워진 대상이 많아도 git 프로세스는 문서마다 log 한 번, 전체에 cat-file 한 번이다', () => {
+  const sh = (...a) => spawnSync('git', a, { cwd: fx.wb, encoding: 'utf8' });
+  const names = Array.from({ length: 6 }, (_, i) => `site/f${i}.js`);
+  for (const n of names) fx.write(n, '// x\n');
+  const links = names.map((n) => `[코드](../../../${n})`).join(' ');
+  fx.write('records/alpha/KEYA-2/discovery.md', `${fx.read('records/alpha/KEYA-2/discovery.md')}\n${links} [없던 코드](../../../site/never.js)\n`);
+  sh('add', '-A');
+  sh('commit', '-qm', 'record with links');
+  sh('rm', '-q', ...names);
+  sh('commit', '-qm', 'remove sources');
+  fx.write('records/alpha/KEYA-2/discovery.md', `${fx.read('records/alpha/KEYA-2/discovery.md')}- [x] 체크\n`);
+  sh('commit', '-qam', 'edit record after removal');
+  const trace = path.join(fx.ws, 'git-trace.txt');
+  const r = cli(fx, 'lint', ['--all'], { json: true, env: { GIT_TRACE: trace } }).json;
+  assert.equal(ofRule(r, 'LINK-REMOVED').length, names.length);
+  assert.deepEqual(ofRule(r, 'LINK-BROKEN').map((f) => f.message), ['링크 대상이 없다: ../../../site/never.js']);
+  const calls = fs.readFileSync(trace, 'utf8').split('\n').filter((l) => /built-in: git (cat-file|log '--format=%H' --) /.test(l));
+  assert.equal(calls.filter((l) => l.includes('cat-file')).length, 1);
+  assert.equal(calls.filter((l) => l.includes('records/alpha/KEYA-2/discovery.md')).length, 1);
+});
+
+test('LINK-*: --files는 대상 문서의 링크만 검사한다', () => {
+  fx.write('records/alpha/KEYA-2/discovery.md', `${fx.read('records/alpha/KEYA-2/discovery.md')}\n[깨짐](nope.md)\n`);
+  fx.write('board/tasks/KEYA-1.md', `${fx.read('board/tasks/KEYA-1.md')}\n[깨짐](nope.md)\n`);
+  const target = cli(fx, 'lint', ['--files', 'board/tasks/KEYA-1.md'], { json: true }).json;
+  assert.deepEqual(ofRule(target, 'LINK-BROKEN').map((f) => f.file), ['board/tasks/KEYA-1.md']);
+  assert.equal(target.hidden.error, 0);
+  const other = cli(fx, 'lint', ['--files', 'records/alpha/KEYA-2/discovery.md'], { json: true }).json;
+  assert.deepEqual(ofRule(other, 'LINK-BROKEN').map((f) => f.file), ['records/alpha/KEYA-2/discovery.md']);
 });
 
 test('LINK-ANCHOR: workbench 문서의 없는 앵커는 오류. 제목 slug·명시 앵커·코드 안 링크는 통과', () => {
