@@ -3,6 +3,7 @@
 import { parseBoardText, parseTaskText, effectiveAuthor } from '../../plugin/cli/lib/model/board.mjs';
 import { parseProjects } from '../../plugin/cli/lib/model/projects.mjs';
 import { ParseError } from '../../plugin/cli/lib/model/errors.mjs';
+import { firstH1 } from '../../plugin/cli/lib/model/markdown.mjs';
 import { resolveHref, hostUrls } from './links.mjs';
 
 const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
@@ -31,8 +32,7 @@ function outputEntry(o, ctx) {
 export function recordTitle(text, path) {
   const { data, body } = parseTaskText(text);
   if (data.title) return String(data.title);
-  const h1 = /^# (.+)$/m.exec(body);
-  return h1 ? h1[1].trim() : basename(path);
+  return firstH1(body) ?? basename(path);
 }
 
 /**

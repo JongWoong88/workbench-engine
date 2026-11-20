@@ -1,4 +1,4 @@
-// 보드 데이터 모델(bin/lib/board.mjs): board.yml 검증, task 파일 읽기·쓰기, 상태 전이
+// 보드 데이터 모델(plugin/cli/lib/board.mjs): board.yml 검증, task 파일 읽기·쓰기, 상태 전이
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseBoard, parseTaskText, stringifyTask, planMove, planArchive, newTaskData } from '../plugin/cli/lib/board.mjs';

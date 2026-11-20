@@ -1,4 +1,4 @@
-// bin/lib/anchors.mjs: lint가 계산한 앵커가 보드 사이트 렌더러(markdown-it-anchor + github-slugger)와 같은지
+// plugin/cli/lib/model/markdown.mjs: lint가 계산한 앵커가 보드 사이트 렌더러(markdown-it-anchor + github-slugger)와 같은지
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import MarkdownIt from 'markdown-it';
 import anchor from 'markdown-it-anchor';
 import GithubSlugger from 'github-slugger';
-import { anchorsOf, headingItemId } from '../plugin/cli/lib/anchors.mjs';
+import { anchorsOf, headingItemId } from '../plugin/cli/lib/model/markdown.mjs';
 
 const WB = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 

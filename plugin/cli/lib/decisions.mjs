@@ -1,6 +1,7 @@
 // decisions.md(이슈 하나의 agent 결정과 담당자 평가) 파서·집계·검사.
 // 형식의 정본: plugin/references/decisions-format.md
 import { parseFrontmatter } from './workbench.mjs';
+import { parseHeading, blankCode } from './model/markdown.mjs';
 
 export const STAGES = ['discovery', 'proposal', 'design', 'planning'];
 // '하'는 2026-10-30 이전 기록을 읽기 위해서만 받는다. 새 기록은 상·중만 쓴다
@@ -17,14 +18,16 @@ const isSeparator = (line) => /^\|?\s*:?-{3,}/.test(line.trim());
 
 /**
  * decisions.md 본문을 읽는다. 형식을 벗어난 부분은 버리지 않고 problems에 줄 번호와 함께 남긴다.
- * @returns {{status, progress: string[]|null, progressLine, items: object[], details: Map, problems: {line:number, message:string}[]}}
+ * 상세 절 제목은 `### <a id="D-n"></a>D-n …`(정식)과 `### D-n …`(옛 형식, 제목 위 줄 앵커 포함)을 모두 읽는다.
+ * @returns {{status, progress: string[]|null, progressLine, items: object[], details: Map, problems: {line:number, message:string, owner?:string}[]}}
  */
 export function parseDecisions(text) {
   const fm = parseFrontmatter(text);
   const lines = fm.body.split('\n');
   const lineNo = (i) => fm.bodyLine + i;
   const problems = [];
-  const problem = (i, message) => problems.push({ line: lineNo(i), message });
+  // owner: 고칠 주체(lint의 누가). 평가 값·평가 상태는 평가자(사용자)가 쓴다
+  const problem = (i, message, owner = 'agent') => problems.push({ line: lineNo(i), message, owner });
 
   let status = null;
   let progress = null;
@@ -36,8 +39,8 @@ export function parseDecisions(text) {
   const details = new Map();
 
   lines.forEach((line, i) => {
-    const h2 = /^## (.+)$/.exec(line);
-    if (h2) { section = h2[1].trim(); detail = null; return; }
+    const h = parseHeading(line);
+    if (h?.level === 2) { section = h.text; detail = null; return; }
 
     if (section === null) {
       const st = /^평가 상태:\s*(.*)$/.exec(line);
@@ -46,7 +49,7 @@ export function parseDecisions(text) {
         const done = /^평가 완료\s*\((\d{4}-\d{2}-\d{2}),\s*(.+)\)$/.exec(v); // 평가자에 괄호가 들어갈 수 있다
         if (v === '평가 전') status = { state: '평가 전', line: lineNo(i) };
         else if (done) status = { state: '평가 완료', date: done[1], evaluator: done[2].trim(), line: lineNo(i) };
-        else problem(i, `평가 상태 값 '${v}'를 읽을 수 없다. '평가 전' 또는 '평가 완료 (YYYY-MM-DD, 평가자)'로 쓴다`);
+        else problem(i, `평가 상태 값 '${v}'를 읽을 수 없다. '평가 전' 또는 '평가 완료 (YYYY-MM-DD, 평가자)'로 쓴다`, 'user');
       }
       const pr = /^진행:\s*(.*)$/.exec(line);
       if (pr) {
@@ -70,7 +73,7 @@ export function parseDecisions(text) {
       if (!STAGES.includes(stage)) problem(i, `${id} 단계 값 '${stage}'가 ${STAGES.join('·')} 중 하나가 아니다`);
       const im = new RegExp(`^(${IMPACTS.join('|')})(?:→(${IMPACTS.join('|')}))?$`).exec(impactCell);
       if (!im) problem(i, `${id} 영향도 값 '${impactCell}'가 상·중·하 또는 '중→상' 형식이 아니다`);
-      if (evaluation && !EVALUATIONS.includes(evaluation)) problem(i, `${id} 평가 값 '${evaluation}'가 ${EVALUATIONS.join(' · ')} 또는 빈칸이 아니다`);
+      if (evaluation && !EVALUATIONS.includes(evaluation)) problem(i, `${id} 평가 값 '${evaluation}'가 ${EVALUATIONS.join(' · ')} 또는 빈칸이 아니다`, 'user');
       // 하네스: 설치 버전(wb --version, 예 1.2.0). 분리 전 기록은 workbench 커밋 7자리다
       if (!/^([0-9a-f]{7,40}|\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?|—|-)$/.test(harness)) problem(i, `${id} 하네스 값 '${harness}'가 설치 버전(예 1.2.0), 커밋 7자리, '—' 중 하나가 아니다`);
       items.push({
@@ -83,8 +86,7 @@ export function parseDecisions(text) {
     }
 
     if (section === '상세') {
-      const h3 = /^### (D-\d+)\b/.exec(line);
-      if (h3) { detail = { line: lineNo(i), redone: [] }; details.set(h3[1], detail); return; }
+      if (h?.level === 3 && /^D-\d+$/.test(h.itemId ?? '')) { detail = { line: lineNo(i), redone: [] }; details.set(h.itemId, detail); return; }
       const rd = /^- 다시 만든 단계:\s*(.*)$/.exec(line);
       if (rd && detail) detail.redone = rd[1].split(',').map((s) => s.trim()).filter(Boolean);
     }
@@ -137,7 +139,7 @@ export function openSummary(open) {
 }
 
 /**
- * 지표(정의의 정본은 bin/decision-stats.mjs 머리 주석). 영향도는 담당자 값을 쓴다.
+ * 지표(정의의 정본은 plugin/cli/decision-stats.mjs 머리 주석). 영향도는 담당자 값을 쓴다.
  * @param {ReturnType<typeof parseDecisions>|ReturnType<typeof parseDecisions>[]} parsed 하나 또는 여럿
  */
 export function decisionStats(parsed, { byHarness = false } = {}) {
@@ -153,12 +155,14 @@ export function decisionStats(parsed, { byHarness = false } = {}) {
 /**
  * 형식 대응 검사. 집계를 믿을 수 있는지 본다.
  * @param {ReturnType<typeof parseDecisions>} p
+ * lint(DEC-FORMAT·DEC-LINK)와 `decision-stats --check`가 함께 쓰는 유일한 검사다.
  * @param {{docs: {file:string, text:string}[]}} o 같은 이슈 폴더의 다른 산출물 (본문의 D-n 링크 대조용)
- * @returns {{line:number|null, message:string}[]}
+ * @returns {{line:number|null, message:string, owner:string, file?:string}[]}
+ *   file이 있으면 decisions.md가 아니라 그 산출물(D-n 링크가 있는 문서)의 위반이다
  */
 export function checkDecisions(p, { docs = [] } = {}) {
   const errors = [...p.problems];
-  const err = (line, message) => errors.push({ line: line ?? null, message });
+  const err = (line, message, owner = 'agent') => errors.push({ line: line ?? null, message, owner });
 
   if (!p.status) err(null, "머리 줄 '평가 상태:'가 없다. H1 아래 첫 줄에 '평가 상태: 평가 전'을 둔다");
   if (!p.progress) err(null, "머리 줄 '진행:'이 없다. '평가 상태:' 다음 줄에 '진행: '(끝난 단계 컬럼 id)을 둔다");
@@ -177,14 +181,15 @@ export function checkDecisions(p, { docs = [] } = {}) {
     const key = `${x.stage}|${x.question}`;
     if (seenKey.has(key)) err(x.line, `${x.id}의 결정 키(단계 ${x.stage} + '${x.question}')가 ${seenKey.get(key)}와 같다. 같은 결정이면 기존 항목을 고치고 이 행을 지운다`);
     else seenKey.set(key, x.id);
-    if (!p.details.has(x.id)) err(x.line, `${x.id}의 상세 절('### ${x.id} …')이 없다`);
-    if (p.status?.state === '평가 완료' && !x.evaluation) err(x.line, `평가 상태가 평가 완료인데 ${x.id}의 평가가 비어 있다`);
+    if (!p.details.has(x.id)) err(x.line, `${x.id}의 상세 절('### <a id="${x.id}"></a>${x.id} …')이 없다`);
+    if (p.status?.state === '평가 완료' && !x.evaluation) err(x.line, `평가 상태가 평가 완료인데 ${x.id}의 평가가 비어 있다`, 'user');
   }
   for (const [id, d] of p.details) if (!seenId.has(id)) err(d.line, `상세 절 ${id}가 요약 표에 없다`);
 
   for (const doc of docs) {
-    for (const m of doc.text.matchAll(/\[(D-\d+)\]\(decisions\.md(?:#[^)]*)?\)/g)) {
-      if (!seenId.has(m[1])) err(null, `${doc.file}이 링크한 ${m[1]}가 요약 표에 없다`);
+    const text = blankCode(doc.text);
+    for (const m of text.matchAll(/\[(D-\d+)\]\(decisions\.md(?:#[^)]*)?\)/g)) {
+      if (!seenId.has(m[1])) errors.push({ file: doc.file, line: text.slice(0, m.index).split('\n').length, message: `링크한 ${m[1]}가 decisions.md 요약 표에 없다`, owner: 'agent' });
     }
   }
   return errors;

@@ -183,11 +183,17 @@ test('LINK-ANCHOR-ID: ID 항목 제목을 slug로 가리키면 경고하고 ID �
   const fm = fx.read('records/alpha/KEYA-2/discovery.md').split('# d')[0];
   fx.write('records/alpha/KEYA-2/discovery.md', `${fm}# d\n\n### D-1 조사 범위를 정하는가\n\n### <a id="D-2"></a>D-2 원인을 단정하는가\n\n`
     + '[범위](#d-1-조사-범위를-정하는가) [원인](#d-2-원인을-단정하는가) [원인](#D-2)\n');
-  const found = ofRule(lintAll(), 'LINK-ANCHOR-ID').map((f) => [f.severity, f.fix[0]]);
-  assert.deepEqual(found, [
-    ['warn', `대상 제목(records/alpha/KEYA-2/discovery.md:12)에 <a id="D-1"></a>를 넣고 '#D-1'로 링크한다`],
+  const found = ofRule(lintAll(), 'LINK-ANCHOR-ID');
+  assert.deepEqual(found.map((f) => [f.severity, f.fix[0]]), [
+    ['warn', `대상 제목(records/alpha/KEYA-2/discovery.md:12)의 # 바로 뒤에 <a id="D-1"></a>를 넣고(\`### <a id="D-1"></a>D-1 조사 범위를 정하는가\`) '#D-1'로 링크한다`],
     ['warn', "'#D-2'로 링크한다"],
   ]);
+  // 기계적 수정: 앵커가 없으면 제목과 링크 두 줄, 있으면 링크 한 줄
+  assert.deepEqual(found[0].edits.map((e) => [e.file, e.line, e.after]), [
+    ['records/alpha/KEYA-2/discovery.md', 16, '[범위](#D-1) [원인](#d-2-원인을-단정하는가) [원인](#D-2)'],
+    ['records/alpha/KEYA-2/discovery.md', 12, '### <a id="D-1"></a>D-1 조사 범위를 정하는가'],
+  ]);
+  assert.deepEqual(found[1].edits.map((e) => [e.line, e.after]), [[16, '[범위](#d-1-조사-범위를-정하는가) [원인](#D-2) [원인](#D-2)']]);
 });
 
 test('TASK-ARCHIVED: 보관 표시는 종료 컬럼에서 true만', () => {

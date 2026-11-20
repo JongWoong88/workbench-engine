@@ -250,6 +250,7 @@ updated: 2026-09-28
 | 대응표 | `TSV-REMOTE`(옛 이름 `TSV-GITLAB`: remote 열 없음, 항목 수가 repos와 다름) | 오류 |
 | 설정 | `CONFIG-SHARED`(공유 설정의 잘못된 값 — 오류, 모르는 키 — 경고) | 오류·경고 |
 | 기록 | `REC-PROJECT`, `REC-ISSUE`, `REC-ISSUE-PROJECT`, `REC-FM-MISSING`·`REC-FM-FIELD`, `REC-LIFECYCLE`, `REC-TASKID`, `REC-UNLINKED` | 오류 |
+| 결정 기록 | `DEC-FORMAT`(decisions.md 형식: 머리 두 줄, 요약 표, 요약 표↔상세 절, 결정 키 중복), `DEC-LINK`(산출물이 링크한 `D-n`이 요약 표에 없음). 형식은 [decisions-format.md](decisions-format.md). `wb decision-stats --check`와 같은 검사다 | 오류(형식 버전 2부터) |
 | 동결 | `REC-FROZEN` — 종료된 이슈의 기록을 바꿈 | 경고 |
 | 링크 | `LINK-ABS`, `LINK-BROKEN`, `LINK-ANCHOR` | 오류 |
 | 링크 | `LINK-EXTERNAL`(서비스 저장소 링크가 `base` 커밋에도 지금 체크아웃에도 없음, 저장소가 없는 PC에서는 건너뜀), `LINK-REMOVED`(문서 저장소 안 대상이 지금은 없지만 그 파일의 이력에는 있었음), `LINK-PROSE`, `LINK-ANCHOR-ID` | 경고 |

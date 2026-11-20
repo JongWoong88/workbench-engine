@@ -10,7 +10,8 @@ export const HOST_TYPES = ['gitlab', 'github'];
 export const DEFAULT_DOC_ROOTS = ['src/main/resources/docs', 'docs'];
 export const DEFAULTS = Object.freeze({ formatVersion: 1, branch: 'main', fetchIntervalSec: 30 });
 /** 이 엔진이 아는 가장 높은 형식 버전. 깨지는 변경(K-5)이나 새 오류 규칙(K-3)을 낼 때 올린다 */
-export const FORMAT_VERSION = 1;
+// 2: decisions.md 형식 검사(DEC-FORMAT·DEC-LINK)를 lint 오류로 (WBENGINE-2)
+export const FORMAT_VERSION = 2;
 
 /**
  * 호환 규칙 K-8: 문서 저장소가 이 엔진보다 새 형식이면 멈춘다. 자동 갱신을 끈 PC가 옛 엔진으로 남은 경우다.

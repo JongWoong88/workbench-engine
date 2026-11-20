@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "host": {
     "type": "gitlab",
     "web": "https://gitlab.example.com"

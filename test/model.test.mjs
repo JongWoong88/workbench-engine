@@ -1,4 +1,4 @@
-// 순수 모델 모듈(bin/lib/model/): 보드 사이트 번들이 함께 쓰므로 node: 모듈에 의존하지 않는다
+// 순수 모델 모듈(plugin/cli/lib/model/): 보드 사이트 번들이 함께 쓰므로 node: 모듈에 의존하지 않는다
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

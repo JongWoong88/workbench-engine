@@ -222,7 +222,9 @@ test('decision-stats --check: 형식 오류가 있으면 종료 코드 1과 파�
   fx.write('records/alpha/KEYA-3/proposal.md', '본문 ([D-4](decisions.md#d-4))\n');
   const r = cli(fx, 'decision-stats', ['--check', '--task', 'KEYA-3'], { json: true });
   assert.equal(r.code, 1);
-  assert.equal(r.json.errors[0].file, 'records/alpha/KEYA-3/decisions.md');
+  // 링크 위반은 링크가 있는 산출물의 파일·줄로 낸다
+  assert.equal(r.json.errors[0].file, 'records/alpha/KEYA-3/proposal.md');
+  assert.equal(r.json.errors[0].line, 1);
   assert.match(r.json.errors[0].message, /D-4/);
 });
 

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { FORMAT_VERSION } from '../plugin/cli/lib/shared-config.mjs';
 
 const WB = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'plugin', 'bin', 'wb.mjs');
 let tmp;
@@ -28,7 +29,7 @@ test('wb init --host gitlab: 템플릿·git·hook을 만들고, 만든 저장소
   for (const f of ['board/tasks/.gitkeep', 'records/.gitkeep', 'projects.tsv', 'workbench.config.json', '.githooks/pre-commit', '.gitlab-ci.yml', '.gitattributes', '.gitignore', 'README.md']) assert.ok(fs.existsSync(path.join(root, f)), f);
   assert.ok(!fs.existsSync(path.join(root, '.github')));
   const conf = JSON.parse(fs.readFileSync(path.join(root, 'workbench.config.json'), 'utf8'));
-  assert.deepEqual(conf, { formatVersion: 1, host: { type: 'gitlab', web: 'https://gitlab.example.com' }, repo: 'grp/docs', branch: 'main' });
+  assert.deepEqual(conf, { formatVersion: FORMAT_VERSION, host: { type: 'gitlab', web: 'https://gitlab.example.com' }, repo: 'grp/docs', branch: 'main' });
   assert.equal(git(root, 'config', '--get', 'core.hooksPath'), '.githooks');
   assert.equal(git(root, 'symbolic-ref', '--short', 'HEAD'), 'main');
   // 설정하지 않았으므로 다음 할 일에 data-root가 있다

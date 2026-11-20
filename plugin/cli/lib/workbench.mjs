@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Rejection, EXIT } from './report.mjs';
 import { parseProjects } from './model/projects.mjs';
+import { firstH1 } from './model/markdown.mjs';
 
 // ── 위치 ──────────────────────────────────────────────────
 // 엔진(이 코드가 든 저장소·설치물)과 문서 저장소(board/, records/, projects.tsv)는 따로 있다.
@@ -182,7 +183,7 @@ export function yamlScalar(s) {
   return /^[\s\-?:,[\]{}#&*!|>'"%@`]|: | #|^$|^(true|false|null|yes|no|~)$|^\d/i.test(s) ? `'${s.replace(/'/g, "''")}'` : s;
 }
 
-export const h1 = (body) => (/^# (.+)$/m.exec(body) || [])[1]?.trim() ?? null;
+export const h1 = firstH1;
 
 // ── projects.tsv ───────────────────────────────────────────
 // 파싱은 node: 의존이 없는 model/projects.mjs에 있다(보드 화면와 함께 쓴다)

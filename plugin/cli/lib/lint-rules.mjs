@@ -1,6 +1,9 @@
 // workbench 규칙 검사. 각 규칙은 위반마다 finding을 낸다.
-//   finding = { rule, severity: 'error'|'warn', file, line?, message, fix: string[], owner, related?: string[] }
+//   finding = { rule, severity: 'error'|'warn', file, line?, message, fix: string[], owner, related?: string[], edits?: Edit[] }
 //   file·related는 workbench 기준 상대경로다. --changed 등에서 대상 파일과 겹치는 finding만 보인다.
+//   edits: fix를 기계적으로 적용하는 한 줄 바꾸기. Edit = { file, line, before, after } (before가 그 줄과 같을 때만 적용한다)
+//     기계적으로 고칠 수 있는 규칙만 낸다. test/coherence.test.mjs가 edits를 적용한 뒤 lint를 다시 돌려
+//     그 finding이 사라지고 새 위반이 생기지 않는지 확인한다 — 수정 안내가 다른 규칙과 어긋나지 않게 하는 장치다
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -9,7 +12,8 @@ import {
   loadProjects, listFiles,
 } from './workbench.mjs';
 import { BOARD_FILE, BOARD_FILE_LABEL, loadBoard, loadBoardTasks, parseTaskText } from './board.mjs';
-import { anchorsOf, headingItemId } from './anchors.mjs';
+import { anchorsOf, withHeadingAnchor, blankCode } from './model/markdown.mjs';
+import { parseDecisions, checkDecisions } from './decisions.mjs';
 import { SHARED_CONFIG_FILE, parseSharedConfig } from './shared-config.mjs';
 import { effectiveAuthor } from './model/board.mjs';
 import { Rejection } from './report.mjs';
@@ -19,16 +23,10 @@ const EOL_EXTS = ['md', 'yml', 'mjs', 'js', 'html', 'css'];
 
 const KIND_BY_PREFIX = [['discovery', '조사'], ['proposal', '제안'], ['policy', '정책'], ['decision', '결정'], ['design', '설계'], ['plan', '작업계획'], ['review', '검토'], ['verification', '검증'], ['qa', 'QA']];
 
-/** 코드 블록·인라인 코드를 같은 길이의 공백으로 지운다 (줄 번호 유지) */
-function stripCode(text) {
-  return text
-    .replace(/^(```|~~~)[\s\S]*?^\1/gm, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/`[^`\n]*`/g, (m) => ' '.repeat(m.length));
-}
 const lineAt = (text, idx) => text.slice(0, idx).split('\n').length;
 
 export function collectLinks(text) {
-  const t = stripCode(text.replace(/\r\n/g, '\n'));
+  const t = blankCode(text);
   const out = [];
   for (const m of t.matchAll(/!?\[(?:[^\]\\]|\\.)*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) out.push({ href: m[1], line: lineAt(t, m.index) });
   return out;
@@ -55,7 +53,7 @@ const TASK_REQUIRED = ['task_id', 'title', 'project', 'type', 'column', 'author'
  * 새 오류 규칙(또는 기존 규칙의 검사를 강화하는 변경)을 넣을 때는 반드시 FORMAT_VERSION(shared-config.mjs)을 올리고 그 값을 여기 적는다.
  * 그래야 엔진을 갱신해도 기존 문서 저장소의 lint가 갑자기 실패하지 않는다
  */
-export const RULE_SINCE = {};
+export const RULE_SINCE = { 'DEC-FORMAT': 2, 'DEC-LINK': 2 };
 
 /** 문서 저장소 formatVersion보다 늦게 생긴 오류 규칙의 위반을 경고로 낮춘다 */
 export function applySince(findings, formatVersion, since = RULE_SINCE) {
@@ -215,6 +213,23 @@ export function runRules({ staged = [], linkScope = null } = {}) {
       const idir = path.join(pdir, id);
       const ifiles = listFiles(idir).map(rel);
       const task = taskById.get(id);
+      // decisions.md 형식(references/decisions-format.md). decision-stats --check와 같은 검사(checkDecisions)다
+      const decAbs = path.join(idir, 'decisions.md');
+      if (exists(decAbs)) {
+        const decRel = rel(decAbs);
+        const siblings = fs.readdirSync(idir).filter((n) => n.endsWith('.md') && n !== 'decisions.md')
+          .map((n) => ({ file: rel(path.join(idir, n)), text: read(path.join(idir, n)) }));
+        for (const e of checkDecisions(parseDecisions(read(decAbs)), { docs: siblings })) {
+          const byUser = e.owner === 'user';
+          if (e.file) {
+            add({ rule: 'DEC-LINK', file: e.file, line: e.line, related: [decRel], owner: e.owner, message: e.message,
+              fix: ['번호가 틀렸으면 decisions.md 요약 표의 번호로 고친다', '기록하지 않은 결정이면 decisions.md에 D-n으로 기록한다(references/decision-recording.md)'] });
+          } else {
+            add({ rule: 'DEC-FORMAT', file: decRel, line: e.line ?? 1, owner: e.owner, message: e.message,
+              fix: [byUser ? '평가자가 쓰는 값이다. 고치지 말고 사용자에게 확인한다' : '형식(references/decisions-format.md)에 맞게 고친다'] });
+          }
+        }
+      }
       if (!task) {
         add({ rule: 'REC-ISSUE', file: `records/${p}/${id}/`, owner: 'user', related: ifiles, message: `이슈 폴더 ${id}에 해당하는 이슈가 보드에 없다`, fix: ['폴더 이름이 오타면 바른 task_id로 폴더를 옮긴다', '이슈가 정말 없으면 이슈를 새로 만들지 말고 사용자에게 알린다 (이슈 없는 기록은 records/{project}/ 바로 아래에 둔다)'] });
         continue;
@@ -299,12 +314,27 @@ export function runRules({ staged = [], linkScope = null } = {}) {
       return;
     }
     const h = headings.get(anchor);
-    const id = h && (h.explicit[0] ?? headingItemId(h.text));
+    const id = h && (h.explicit[0] ?? h.itemId);
     if (!id || id === anchor) return;
+    // 같은 id가 이미 문서에 있으면(제목 위 줄 앵커 등) 링크만 고친다. 제목에 또 넣으면 id가 겹친다
+    const hasAnchor = h.explicit.length > 0 || ids.has(id);
+    const lineOf = (file, n) => read(file).replace(/\r\n/g, '\n').split('\n')[n - 1];
+    const srcLine = lineOf(path.join(WB, r), line);
+    // 링크 줄과 (앵커가 없으면) 제목 줄을 함께 고쳐야 한다. 하나라도 기계적으로 못 고치면 edits를 내지 않는다
+    let edits = null;
+    if (srcLine?.includes(`](${href}`)) {
+      edits = [{ file: r, line, before: srcLine, after: srcLine.split(`](${href}`).join(`](${href.slice(0, hashAt + 1)}${id}`) }];
+      if (!hasAnchor) {
+        const before = lineOf(target, h.line);
+        const after = before === undefined ? null : withHeadingAnchor(before, id);
+        edits = after && !(rel(target) === r && h.line === line) ? [...edits, { file: rel(target), line: h.line, before, after }] : null;
+      }
+    }
     add({ rule: 'LINK-ANCHOR-ID', severity: 'warn', file: r, line, message: `ID 항목(${id})을 제목 slug '#${anchor}'로 가리킨다. 제목 문구가 바뀌면 링크가 깨진다`,
-      fix: h.explicit.length
-        ? [`'#${h.explicit[0]}'로 링크한다`]
-        : [`대상 제목(${rel(target)}:${h.line})에 <a id="${id}"></a>를 넣고 '#${id}'로 링크한다`] });
+      fix: hasAnchor
+        ? [`'#${id}'로 링크한다`]
+        : [`대상 제목(${rel(target)}:${h.line})의 # 바로 뒤에 <a id="${id}"></a>를 넣고(\`${'#'.repeat(h.level)} <a id="${id}"></a>${h.text}\`) '#${id}'로 링크한다`],
+      ...(edits ? { edits } : {}) });
   };
 
   // 지금은 없는 workbench 안 대상. 이력 확인(LINK-REMOVED/LINK-BROKEN)은 루프 뒤에 git을 몰아 부른다(removedAt)

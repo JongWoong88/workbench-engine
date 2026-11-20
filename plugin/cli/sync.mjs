@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 이슈·기록 변경을 main에 커밋하고 push한다. 스킬은 쓰기 전에 begin, 쓴 뒤에 commit을 부른다.
-//   순서와 거부 규칙: bin/lib/sync.mjs
+//   순서와 거부 규칙: lib/sync.mjs
 import { run, args, usage } from './lib/report.mjs';
 import { begin, commit } from './lib/sync.mjs';
 import { withLock } from './lib/lock.mjs';
