@@ -170,6 +170,24 @@ a { color: var(--link); }
 .md ul.contains-task-list { list-style: none; padding-left: 1.2em; }
 .md img { max-width: 100%; }
 .md pre.mermaid { background: none; border: 0; text-align: center; }
+/* 다이어그램은 화면 한 장에 들어오게 줄이고(높이를 넘으면 비율을 지켜 줄어든다), 누르면 크게 본다(diagram-viewer.mjs) */
+.md pre.mermaid.zoomable { position: relative; }
+.md pre.mermaid > svg { max-height: calc(100vh - 140px); }
+.md pre.mermaid.zoomable > svg { cursor: zoom-in; }
+.diagram-zoom {
+  position: absolute; top: 4px; right: 4px; font: inherit; line-height: 1; padding: 4px 8px; cursor: pointer;
+  color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+}
+@media (hover: hover) {
+  .diagram-zoom { opacity: 0; transition: opacity .15s; }
+  .md pre.mermaid:hover > .diagram-zoom, .diagram-zoom:focus-visible { opacity: 1; }
+}
+.diagram-dialog { width: calc(100vw - 24px); }
+.diagram-level { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 4em; text-align: right; }
+.diagram-stage { flex: 1; position: relative; overflow: hidden; cursor: grab; touch-action: none; user-select: none; }
+.diagram-stage.dragging { cursor: grabbing; }
+.diagram-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.diagram-canvas > svg { display: block; }
 .help .md { max-width: 980px; }
 .outputs { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; }
 .outputs li { display: contents; }

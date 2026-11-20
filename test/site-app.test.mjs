@@ -21,7 +21,7 @@ const windows = [];
 after(() => { for (const w of windows) w.close(); });
 
 const GITLAB = { type: 'gitlab', web: 'https://git.example' };
-function setup({ tasks, files = {}, url = 'http://127.0.0.1:47800/', failStart, boardText = BOARD_YML, copyText, copiedMs = 1e9, host = GITLAB, worktree = false } = {}) {
+function setup({ tasks, files = {}, url = 'http://127.0.0.1:47800/', failStart, boardText = BOARD_YML, copyText, copiedMs = 1e9, host = GITLAB, worktree = false, loadVendor } = {}) {
   const dom = new JSDOM(HTML, { url, pretendToBeVisual: true });
   const w = dom.window;
   windows.push(w);
@@ -44,7 +44,7 @@ function setup({ tasks, files = {}, url = 'http://127.0.0.1:47800/', failStart, 
     async readBinary() { return null; },
     async lastCommit() { return 'rc1'; },
   };
-  const app = createApp({ window: w, data, render: createRenderer(w), config: { host, repo: 'grp/wb', branch: 'main', pollMs: 1e9, copiedMs, worktree }, ...(copyText ? { copyText } : {}) });
+  const app = createApp({ window: w, data, render: createRenderer(w), config: { host, repo: 'grp/wb', branch: 'main', pollMs: 1e9, copiedMs, worktree }, ...(copyText ? { copyText } : {}), ...(loadVendor ? { loadVendor } : {}) });
   return { w, doc: w.document, app, repo, data, calls };
 }
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -209,6 +209,47 @@ test('기록 뷰어: 렌더링, 같은 문서 앵커는 해시 라우트를 바�
   assert.deepEqual(parseHash(other), { id: 'K-1', output: 'r', record: 'records/common/K-1/other.md', anchor: null });
   await go(w, other);
   assert.equal(body.querySelector('h1').textContent, '다른');
+});
+
+test('다이어그램: 크게 보기 버튼과 다이어그램 클릭으로 확대 창을 열고, 맞춤·확대·원래 크기·닫기', async () => {
+  const mermaid = {
+    initialize() {},
+    async run({ nodes }) {
+      for (const n of nodes) n.innerHTML = '<svg viewBox="0 0 200 100" width="100%" style="max-width: 200px;"><g/></svg>';
+    },
+  };
+  const { w, doc, app } = setup({
+    files: { [REC]: '# 설계 문서\n\n```mermaid\nflowchart LR\n  a-->b\n```\n' },
+    loadVendor: async (name) => (name === 'mermaid' ? mermaid : null),
+  });
+  await app.start();
+  await go(w, '#K-1/0');
+  const pre = doc.querySelector('#wb-task-body pre.mermaid');
+  assert.ok(pre.classList.contains('zoomable'));
+  const zoom = pre.querySelector('.diagram-zoom');
+  assert.equal(zoom.getAttribute('aria-label'), '크게 보기');
+
+  zoom.click();
+  const dialog = doc.querySelector('dialog.diagram-dialog');
+  assert.ok(dialog.open);
+  const svg = dialog.querySelector('.diagram-canvas > svg');
+  assert.equal(svg.getAttribute('width'), '200');
+  assert.equal(svg.getAttribute('height'), '100');
+  assert.equal(svg.style.maxWidth, 'none');
+  const level = () => dialog.querySelector('.diagram-level').textContent;
+  assert.equal(level(), '200%'); // 맞춤은 작은 다이어그램을 2배까지만 키운다
+  dialog.dispatchEvent(new w.KeyboardEvent('keydown', { key: '1', bubbles: true }));
+  assert.equal(level(), '100%');
+  dialog.dispatchEvent(new w.KeyboardEvent('keydown', { key: '+', bubbles: true }));
+  assert.equal(level(), '125%');
+  dialog.querySelector('button[aria-label="닫기"]').click();
+  assert.equal(dialog.open, false);
+  assert.equal(dialog.querySelector('.diagram-canvas').children.length, 0);
+  assert.ok(pre.querySelector(':scope > svg'), '본문 다이어그램은 그대로 둔다');
+
+  pre.querySelector(':scope > svg').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+  assert.ok(dialog.open);
+  assert.equal(doc.querySelectorAll('dialog.diagram-dialog').length, 1, '창은 하나를 다시 쓴다');
 });
 
 test('새로고침해도 기록 이동 위치를 복원한다', async () => {

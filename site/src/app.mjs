@@ -3,6 +3,7 @@
 import { buildBoard, recordTitle } from './board-model.mjs';
 import { ParseError } from '../../plugin/cli/lib/model/errors.mjs';
 import { prompts, moveOptions, promptActions } from './prompts.mjs';
+import { createDiagramViewer } from './diagram-viewer.mjs';
 
 // 주소 해시가 열린 화면의 정본이다.
 //   #{id}                     이슈 팝업
@@ -46,6 +47,7 @@ export function createApp({ window: w, data: api, render, config, loadVendor = a
     for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) e.append(c);
     return e;
   }
+  const diagramViewer = createDiagramViewer(w);
   const time = (iso) => new Date(iso).toLocaleString('ko-KR', { hour12: false });
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('ko-KR') : '—');
 
@@ -493,6 +495,7 @@ export function createApp({ window: w, data: api, render, config, loadVendor = a
         const dark = w.matchMedia?.('(prefers-color-scheme: dark)').matches;
         mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: dark ? 'dark' : 'default' });
         await mermaid.run({ nodes: diagrams }).catch(() => {});
+        for (const pre of diagrams) diagramViewer.attach(pre);
       }
     }
     const codes = [...box.querySelectorAll('pre > code')];
